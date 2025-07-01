@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import api from '@/lib/api';
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from './ApiAuthContext';
@@ -32,61 +32,84 @@ const endpointMap = {
     qcRecords: 'qc-records',
 };
 
-const coreDataKeys = ['notifications', 'settings'];
-
 export const DataProvider = ({ children }) => {
     const { toast } = useToast();
     const { isAuthenticated } = useAuth();
     const [data, setData] = useState(Object.keys(endpointMap).reduce((acc, key) => ({...acc, [key]: []}), {}));
     const [loadingStates, setLoadingStates] = useState({});
-    const [loadedKeys, setLoadedKeys] = useState(new Set());
-    const [coreLoading, setCoreLoading] = useState(true);
+    const loadedKeysRef = useRef(new Set());
+    const loadingPromisesRef = useRef(new Map());
 
     const fetchData = useCallback(async (keys, force = false) => {
-        const keysToFetch = (Array.isArray(keys) ? keys : [keys]).filter(key => force || !loadedKeys.has(key));
-        if (keysToFetch.length === 0) return;
-
-        const newLoadingStates = {};
-        keysToFetch.forEach(key => { newLoadingStates[key] = true; });
-        setLoadingStates(prev => ({ ...prev, ...newLoadingStates }));
-
-        const requests = keysToFetch.map(key =>
-            api.get(`/${endpointMap[key]}`).catch(err => {
-                console.error(`Failed to fetch ${key}:`, err);
-                toast({ title: `Error loading ${key}`, description: 'Could not load required data.', variant: 'destructive' });
-                return { data: { data: key === 'settings' ? {} : [] }};
-            })
-        );
+        if (!isAuthenticated) return;
         
-        const responses = await Promise.all(requests);
-        
-        setData(prevData => {
-            const newData = { ...prevData };
-            responses.forEach((response, index) => {
-                const key = keysToFetch[index];
-                newData[key] = response.data.data ?? (key === 'settings' ? {} : []);
-            });
-            return newData;
+        const keysArray = Array.isArray(keys) ? keys : [keys];
+        const keysToFetch = keysArray.filter(key => {
+            if (!endpointMap[key]) return false;
+            return force || !loadedKeysRef.current.has(key);
         });
         
-        setLoadedKeys(prev => new Set([...prev, ...keysToFetch]));
+        if (keysToFetch.length === 0) return;
 
-        const clearedLoadingStates = {};
-        keysToFetch.forEach(key => { clearedLoadingStates[key] = false; });
-        setLoadingStates(prev => ({ ...prev, ...clearedLoadingStates }));
-
-    }, [loadedKeys, toast]);
-    
-    useEffect(() => {
-        if (isAuthenticated) {
-            setCoreLoading(true);
-            fetchData(coreDataKeys, true).finally(() => setCoreLoading(false));
-        } else {
-            setCoreLoading(false);
-            setData(Object.keys(endpointMap).reduce((acc, key) => ({...acc, [key]: []}), {}));
-            setLoadedKeys(new Set());
+        // Check if any of these keys are already being loaded
+        const alreadyLoading = keysToFetch.filter(key => loadingPromisesRef.current.has(key));
+        const needToLoad = keysToFetch.filter(key => !loadingPromisesRef.current.has(key));
+        
+        // Wait for already loading promises
+        if (alreadyLoading.length > 0) {
+            await Promise.all(alreadyLoading.map(key => loadingPromisesRef.current.get(key)));
         }
-    }, [isAuthenticated, fetchData]);
+
+        if (needToLoad.length === 0) return;
+
+        // Set loading states
+        setLoadingStates(prev => {
+            const newStates = { ...prev };
+            needToLoad.forEach(key => { newStates[key] = true; });
+            return newStates;
+        });
+
+        // Create promises for each key
+        const loadPromises = needToLoad.map(async (key) => {
+            const promise = api.get(`/${endpointMap[key]}`).catch(err => {
+                console.error(`Failed to fetch ${key}:`, err);
+                toast({ 
+                    title: `Error loading ${key}`, 
+                    description: 'Could not load required data.', 
+                    variant: 'destructive' 
+                });
+                return { data: { data: key === 'settings' ? {} : [] }};
+            });
+            
+            loadingPromisesRef.current.set(key, promise);
+            return { key, promise };
+        });
+
+        try {
+            const results = await Promise.all(loadPromises.map(({ promise }) => promise));
+            
+            // Update data
+            setData(prevData => {
+                const newData = { ...prevData };
+                results.forEach((response, index) => {
+                    const key = needToLoad[index];
+                    newData[key] = response.data.data ?? (key === 'settings' ? {} : []);
+                    loadedKeysRef.current.add(key);
+                });
+                return newData;
+            });
+        } finally {
+            // Clear loading states and promises
+            setLoadingStates(prev => {
+                const newStates = { ...prev };
+                needToLoad.forEach(key => { 
+                    newStates[key] = false;
+                    loadingPromisesRef.current.delete(key);
+                });
+                return newStates;
+            });
+        }
+    }, [isAuthenticated, toast]);
 
     const apiAction = async (method, endpoint, payload, successMessage) => {
         try {
@@ -110,6 +133,16 @@ export const DataProvider = ({ children }) => {
         }
     };
 
+    // Clear data when not authenticated
+    React.useEffect(() => {
+        if (!isAuthenticated) {
+            setData(Object.keys(endpointMap).reduce((acc, key) => ({...acc, [key]: []}), {}));
+            loadedKeysRef.current.clear();
+            loadingPromisesRef.current.clear();
+            setLoadingStates({});
+        }
+    }, [isAuthenticated]);
+
     const addData = (key, item) => apiAction('post', `/${endpointMap[key]}`, item, 'Item added successfully.');
     const updateData = (key, id, updatedItem) => apiAction('put', `/${endpointMap[key]}/${id}`, updatedItem, 'Item updated successfully.');
     const deleteData = (key, id) => apiAction('delete', `/${endpointMap[key]}/${id}`, null, 'Item deleted successfully.');
@@ -117,8 +150,7 @@ export const DataProvider = ({ children }) => {
     const value = { 
         data, 
         loadingStates,
-        coreLoading,
-        ensureDataLoaded: (keys) => fetchData(keys, false),
+        ensureDataLoaded: fetchData,
         refetchData: (keys) => fetchData(keys, true),
         addData,
         updateData,
@@ -136,7 +168,10 @@ export const DataProvider = ({ children }) => {
         closeContract: (contractId) => apiAction('put', `/contracts/${contractId}/close`, {}, 'Contract closed successfully.'),
         performTransaction: (payload) => apiAction('post', '/stock/transfer', payload, 'Stock transferred successfully.'),
         createInvoice: (payload) => apiAction('post', '/invoices', payload, 'Invoice created successfully.'),
-        resetData: () => apiAction('post', '/system/reset-data', {}, 'Data reset successfully initiated.').then(() => fetchData(coreDataKeys, true)),
+        resetData: () => apiAction('post', '/system/reset-data', {}, 'Data reset successfully initiated.').then(() => {
+            loadedKeysRef.current.clear();
+            return fetchData(['notifications', 'settings'], true);
+        }),
     };
 
     return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

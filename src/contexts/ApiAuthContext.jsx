@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import api from '@/lib/api';
 
 const AuthContext = createContext(null);
@@ -9,27 +9,43 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [permissions, setPermissions] = useState([]);
+  const checkingAuthRef = useRef(false);
 
   const checkAuth = useCallback(async () => {
+    // Prevent multiple simultaneous auth checks
+    if (checkingAuthRef.current) return;
+    
     const token = localStorage.getItem('authToken');
-    if (token) {
-      try {
-        const response = await api.get('/auth/me');
-        if (response.data.success) {
-          const userData = response.data.data;
-          setUser(userData);
-          setPermissions(userData.department?.permissions || []);
-          setIsAuthenticated(true);
-        } else {
-          localStorage.removeItem('authToken');
-          setIsAuthenticated(false);
-        }
-      } catch (error) {
+    if (!token) {
+      setIsLoading(false);
+      return;
+    }
+
+    checkingAuthRef.current = true;
+    
+    try {
+      const response = await api.get('/auth/me');
+      if (response.data.success) {
+        const userData = response.data.data;
+        setUser(userData);
+        setPermissions(userData.department?.permissions || []);
+        setIsAuthenticated(true);
+      } else {
         localStorage.removeItem('authToken');
+        setUser(null);
+        setPermissions([]);
         setIsAuthenticated(false);
       }
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      localStorage.removeItem('authToken');
+      setUser(null);
+      setPermissions([]);
+      setIsAuthenticated(false);
+    } finally {
+      setIsLoading(false);
+      checkingAuthRef.current = false;
     }
-    setIsLoading(false);
   }, []);
 
   useEffect(() => {
