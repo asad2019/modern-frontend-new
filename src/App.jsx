@@ -50,7 +50,7 @@ function App() {
       >
         <Route index element={<HomeRedirect />} />
         <Route path="dashboard" element={<ProtectedRoute permissions={['all']}><Dashboard /></ProtectedRoute>} />
-        
+
         <Route path="production-dashboard" element={<ProtectedRoute permissions={['production-dashboard']}><ProductionDashboard /></ProtectedRoute>} />
         <Route path="yarn" element={<ProtectedRoute permissions={['yarn']}><YarnManagement /></ProtectedRoute>} />
         <Route path="fabric" element={<ProtectedRoute permissions={['yarn']}><FabricManagement /></ProtectedRoute>} />
@@ -61,7 +61,7 @@ function App() {
         <Route path="cutting" element={<ProtectedRoute permissions={['processing-dashboard']}><Cutting /></ProtectedRoute>} />
         <Route path="sewing" element={<ProtectedRoute permissions={['processing-dashboard']}><Sewing /></ProtectedRoute>} />
         <Route path="packing" element={<ProtectedRoute permissions={['processing-dashboard']}><Packing /></ProtectedRoute>} />
-        
+
         <Route path="contracts" element={<ProtectedRoute permissions={['contracts']}><Contracts /></ProtectedRoute>} />
         <Route path="clients" element={<ProtectedRoute permissions={['clients']}><Clients /></ProtectedRoute>} />
         <Route path="brokers" element={<ProtectedRoute permissions={['clients']}><Brokers /></ProtectedRoute>} />
@@ -72,19 +72,20 @@ function App() {
         <Route path="looms" element={<ProtectedRoute permissions={['production-dashboard']}><Looms /></ProtectedRoute>} />
         <Route path="qualities" element={<ProtectedRoute permissions={['qualities']}><Qualities /></ProtectedRoute>} />
         <Route path="transactions" element={<ProtectedRoute permissions={['transactions']}><Transactions /></ProtectedRoute>} />
-        
+
         <Route path="machines" element={<ProtectedRoute permissions={['machines']}><Machines /></ProtectedRoute>} />
         <Route path="maintenance" element={<ProtectedRoute permissions={['maintenance']}><Maintenance /></ProtectedRoute>} />
         <Route path="quality-control" element={<ProtectedRoute permissions={['quality_control']}><QualityControl /></ProtectedRoute>} />
 
         <Route path="costing" element={<ProtectedRoute permissions={['all']}><Costing /></ProtectedRoute>} />
         <Route path="invoices" element={<ProtectedRoute permissions={['all']}><Invoices /></ProtectedRoute>} />
+            <Route path="/invoice/:id" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
         <Route path="reports" element={<ProtectedRoute permissions={['reports']}><Reports /></ProtectedRoute>} />
         <Route path="activity-log" element={<ProtectedRoute permissions={['all']}><ActivityLog /></ProtectedRoute>} />
-        
+
         <Route path="users" element={<ProtectedRoute permissions={['all']}><Users /></ProtectedRoute>} />
         <Route path="departments" element={<ProtectedRoute permissions={['all']}><Departments /></ProtectedRoute>} />
-        
+
         <Route path="profile" element={<Profile />} />
         <Route path="settings" element={<ProtectedRoute permissions={['settings']}><Settings /></ProtectedRoute>} />
 

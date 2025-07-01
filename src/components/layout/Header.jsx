@@ -48,12 +48,12 @@ const Header = () => {
       <div className="flex items-center gap-4">
         {/* Mobile nav can be added here */}
       </div>
-      <div className="flex-1 max-w-md">
+      {/* <div className="flex-1 max-w-md">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input placeholder="Search contracts, clients, etc..." className="pl-10" onClick={handleNotImplemented} />
         </div>
-      </div>
+      </div> */}
       <div className="flex items-center gap-4">
         <DropdownMenu onOpenChange={(open) => open && unreadCount > 0 && markNotificationsAsRead()}>
           <DropdownMenuTrigger asChild>

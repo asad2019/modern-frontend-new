@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import api from '@/lib/api';
 
@@ -14,7 +13,7 @@ export const AuthProvider = ({ children }) => {
   const checkAuth = useCallback(async () => {
     // Prevent multiple simultaneous auth checks
     if (checkingAuthRef.current) return;
-    
+
     const token = localStorage.getItem('authToken');
     if (!token) {
       setIsLoading(false);
@@ -22,12 +21,12 @@ export const AuthProvider = ({ children }) => {
     }
 
     checkingAuthRef.current = true;
-    
+
     try {
       const response = await api.get('/auth/me');
       if (response.data.success) {
         const userData = response.data.data;
-        
+
         // Handle case where department might be null/undefined
         let userPermissions = [];
         if (userData.department && userData.department.permissions) {
@@ -39,14 +38,14 @@ export const AuthProvider = ({ children }) => {
           // Special case: if user is admin but no department, give all permissions
           userPermissions = ['all'];
         }
-        
+
         console.log('Auth check successful:', {
           user: userData.username,
           department: userData.department?.name || 'No Department',
           permissions: userPermissions,
           rawUserData: userData // Add this for debugging
         });
-        
+
         setUser(userData);
         setPermissions(userPermissions);
         setIsAuthenticated(true);
@@ -77,7 +76,7 @@ export const AuthProvider = ({ children }) => {
     if (response.data.success) {
       const { user: userData, token } = response.data.data;
       localStorage.setItem('authToken', token);
-      
+
       // Handle permissions similar to checkAuth
       let userPermissions = [];
       if (userData.department && userData.department.permissions) {
@@ -87,7 +86,7 @@ export const AuthProvider = ({ children }) => {
       } else if (userData.role === 'admin' || userData.username === 'admin') {
         userPermissions = ['all'];
       }
-      
+
       setUser(userData);
       setPermissions(userPermissions);
       setIsAuthenticated(true);
@@ -159,3 +158,55 @@ export const useAuth = () => {
   }
   return context;
 };
+
+const ApiContext = createContext(null);
+
+export const ApiAuthProvider = ({ children }) => {
+  const [apiToken, setApiToken] = useState(null);
+  const [isApiLoading, setIsApiLoading] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem('apiToken');
+    setApiToken(token);
+    setIsApiLoading(false);
+  }, []);
+
+  const setToken = (token) => {
+    localStorage.setItem('apiToken', token);
+    setApiToken(token);
+  };
+
+  const clearToken = () => {
+    localStorage.removeItem('apiToken');
+    setApiToken(null);
+  };
+
+  const value = {
+    apiToken,
+    isApiLoading,
+    setToken,
+    clearToken,
+  };
+
+  return (
+    <ApiContext.Provider value={value}>
+      {!isApiLoading ? children : (
+        <div className="min-h-screen w-full flex items-center justify-center bg-background">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <div className="text-lg font-medium">Authenticating...</div>
+          </div>
+        </div>
+      )}
+    </ApiContext.Provider>
+  );
+};
+
+export const useApi = () => {
+  const context = useContext(ApiContext);
+  if (!context) {
+    throw new Error('useApi must be used within an ApiProvider');
+  }
+  return context;
+};
+
