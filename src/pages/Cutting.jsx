@@ -1,105 +1,159 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useData } from '@/contexts/DataContext';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/components/ui/use-toast';
-import { PlusCircle, Scissors } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import TableSkeleton from '@/components/layout/TableSkeleton';
+import { useData } from '@/contexts/DataContext';
+import { usePageData } from '@/hooks/usePageData';
+import PageLoader from '@/components/common/PageLoader';
 
 const Cutting = () => {
-    const { data, createProcessingOrder, updateProcessingOrderStatus, fetchDataByKey, loadingStates } = useData();
-    const { toast } = useToast();
+    const { data, isLoading } = usePageData(['processingOrders', 'fabricStock', 'fabricQualities']);
+    const { createProcessingOrder, updateProcessingOrderStatus } = useData();
     
-    const [formData, setFormData] = useState({ fabricStockId: '', quantityMeters: '', pieces: '', status: 'Pending', type: 'cutting' });
-
-    useEffect(() => {
-        fetchDataByKey('processingOrders');
-        fetchDataByKey('fabricStock');
-        fetchDataByKey('fabricQualities');
-    }, [fetchDataByKey]);
-
-    const isLoading = loadingStates.processingOrders !== false;
+    const [formData, setFormData] = useState({ 
+        fabric_stock_id: '', 
+        quantity_meters: '', 
+        pieces: '', 
+        status: 'Pending', 
+        type: 'cutting' 
+    });
 
     const handleSubmit = (e) => {
         e.preventDefault();
         createProcessingOrder(formData);
-        setFormData({ fabricStockId: '', quantityMeters: '', pieces: '', status: 'Pending', type: 'cutting' });
+        setFormData({ 
+            fabric_stock_id: '', 
+            quantity_meters: '', 
+            pieces: '', 
+            status: 'Pending', 
+            type: 'cutting' 
+        });
     };
 
     const handleStatusChange = (orderId, status) => {
         updateProcessingOrderStatus(orderId, status);
     };
 
-    const cuttingOrders = data.processingOrders.filter(o => o.type === 'cutting');
+    const cuttingOrders = data.processingOrders?.filter(o => o.type === 'cutting') || [];
+
+    if (isLoading) {
+        return <PageLoader type="table" />;
+    }
 
     return (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-            <div className="grid gap-6 md:grid-cols-3">
-                <div className="md:col-span-1">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center"><Scissors className="mr-2 h-5 w-5" />Create Cutting Order</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <form onSubmit={handleSubmit} className="space-y-4">
-                                <Select onValueChange={v => setFormData({...formData, fabricStockId: v})} value={formData.fabricStockId}>
-                                    <SelectTrigger><SelectValue placeholder="Select Fabric Stock" /></SelectTrigger>
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="space-y-6"
+        >
+            <div className="grid gap-6 md:grid-cols-2">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Create Cutting Order</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <Label htmlFor="fabric_stock_id">Fabric Stock</Label>
+                                <Select 
+                                    onValueChange={v => setFormData({...formData, fabric_stock_id: v})} 
+                                    value={formData.fabric_stock_id}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select Fabric Stock" />
+                                    </SelectTrigger>
                                     <SelectContent>
-                                        {data.fabricStock.map(f => {
-                                            const quality = data.fabricQualities.find(q=>q.id===f.fabricQualityId);
-                                            return <SelectItem key={f.id} value={f.id}>{quality?.name} - {f.quantityMeters}m</SelectItem>
-                                        })}
+                                        {data.fabricStock?.map(stock => (
+                                            <SelectItem key={stock.id} value={stock.id}>
+                                                {stock.quality_name} - {stock.available_meters}m
+                                            </SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
-                                <Input type="number" placeholder="Meters to cut" value={formData.quantityMeters} onChange={e => setFormData({...formData, quantityMeters: e.target.value})} required/>
-                                <Input type="number" placeholder="Number of pieces" value={formData.pieces} onChange={e => setFormData({...formData, pieces: e.target.value})} required/>
-                                <Button type="submit" className="w-full"><PlusCircle className="mr-2 h-4 w-4" /> Create Order</Button>
-                            </form>
-                        </CardContent>
-                    </Card>
-                </div>
-                <div className="md:col-span-2">
-                    <Card>
-                        <CardHeader><CardTitle>Cutting Orders</CardTitle></CardHeader>
-                        <CardContent>
-                            {isLoading ? <TableSkeleton rows={5} cells={5} /> : (
-                                <Table>
-                                    <TableHeader><TableRow><TableHead>Fabric</TableHead><TableHead>Quantity</TableHead><TableHead>Pieces</TableHead><TableHead>Status</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
-                                    <TableBody>
-                                        {cuttingOrders.map(o => {
-                                            const stock = data.fabricStock.find(s => s.id === o.fabricStockId);
-                                            const quality = stock ? data.fabricQualities.find(q => q.id === stock.fabricQualityId) : null;
-                                            return (
-                                                <TableRow key={o.id}>
-                                                    <TableCell>{quality?.name || 'N/A'}</TableCell>
-                                                    <TableCell>{o.quantityMeters}m</TableCell>
-                                                    <TableCell>{o.pieces}</TableCell>
-                                                    <TableCell><Badge>{o.status}</Badge></TableCell>
-                                                    <TableCell>
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild><Button variant="ghost" size="sm">Update Status</Button></DropdownMenuTrigger>
-                                                            <DropdownMenuContent>
-                                                                <DropdownMenuItem onClick={() => handleStatusChange(o.id, 'In Progress')}>In Progress</DropdownMenuItem>
-                                                                <DropdownMenuItem onClick={() => handleStatusChange(o.id, 'Completed')}>Completed</DropdownMenuItem>
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                    </TableCell>
-                                                </TableRow>
-                                            )
-                                        })}
-                                    </TableBody>
-                                </Table>
-                            )}
-                        </CardContent>
-                    </Card>
-                </div>
+                            </div>
+                            <div>
+                                <Label htmlFor="quantity_meters">Quantity (meters)</Label>
+                                <Input
+                                    id="quantity_meters"
+                                    type="number"
+                                    value={formData.quantity_meters}
+                                    onChange={e => setFormData({...formData, quantity_meters: e.target.value})}
+                                    placeholder="Enter meters to cut"
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="pieces">Expected Pieces</Label>
+                                <Input
+                                    id="pieces"
+                                    type="number"
+                                    value={formData.pieces}
+                                    onChange={e => setFormData({...formData, pieces: e.target.value})}
+                                    placeholder="Enter expected pieces"
+                                />
+                            </div>
+                            <Button type="submit">Create Cutting Order</Button>
+                        </form>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Cutting Orders</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Order ID</TableHead>
+                                    <TableHead>Quantity</TableHead>
+                                    <TableHead>Pieces</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {cuttingOrders.map(order => (
+                                    <TableRow key={order.id}>
+                                        <TableCell className="font-mono text-xs">
+                                            {order.id.slice(-8)}
+                                        </TableCell>
+                                        <TableCell>{order.quantity_meters}m</TableCell>
+                                        <TableCell>{order.pieces}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={order.status === 'Completed' ? 'default' : 'secondary'}>
+                                                {order.status}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            {order.status !== 'Completed' && (
+                                                <Select 
+                                                    onValueChange={v => handleStatusChange(order.id, v)}
+                                                    value={order.status}
+                                                >
+                                                    <SelectTrigger className="w-32">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="Pending">Pending</SelectItem>
+                                                        <SelectItem value="In Progress">In Progress</SelectItem>
+                                                        <SelectItem value="Completed">Completed</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
             </div>
         </motion.div>
     );

@@ -1,28 +1,31 @@
-
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useData } from '@/contexts/DataContext';
 
-export const usePageData = (requiredDataKeys) => {
-  const { ensureDataLoaded, loadingStates, data } = useData();
-  const keysRef = useRef();
-  const loadedRef = useRef(false);
+export const usePageData = (dataKeys = []) => {
+  const { data, loadingStates, ensureDataLoaded, refetchData } = useData();
 
-  // Only update if keys actually changed
-  const keysChanged = JSON.stringify(keysRef.current) !== JSON.stringify(requiredDataKeys);
-  
   useEffect(() => {
-    if (requiredDataKeys && requiredDataKeys.length > 0 && (keysChanged || !loadedRef.current)) {
-      keysRef.current = requiredDataKeys;
-      loadedRef.current = true;
-      ensureDataLoaded(requiredDataKeys);
+    if (dataKeys.length > 0) {
+      ensureDataLoaded(dataKeys);
     }
-  }, [ensureDataLoaded, keysChanged, requiredDataKeys]);
+  }, [dataKeys, ensureDataLoaded]);
 
-  const isLoading = requiredDataKeys?.some(key => loadingStates[key]) || false;
+  const isLoading = dataKeys.some(key => loadingStates[key]);
+
+  // Provide fetchDataByKey for backward compatibility
+  const fetchDataByKey = (key, force = false) => {
+    if (force) {
+      return refetchData([key]);
+    } else {
+      return ensureDataLoaded([key]);
+    }
+  };
 
   return {
     data,
     isLoading,
-    loadingStates
+    loadingStates,
+    fetchDataByKey,
+    refetchData: (keys) => refetchData(keys)
   };
 };

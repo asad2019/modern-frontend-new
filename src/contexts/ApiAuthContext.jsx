@@ -27,8 +27,28 @@ export const AuthProvider = ({ children }) => {
       const response = await api.get('/auth/me');
       if (response.data.success) {
         const userData = response.data.data;
+        
+        // Handle case where department might be null/undefined
+        let userPermissions = [];
+        if (userData.department && userData.department.permissions) {
+          userPermissions = userData.department.permissions;
+        } else if (userData.permissions) {
+          // Fallback: check if permissions are directly on user object
+          userPermissions = userData.permissions;
+        } else if (userData.role === 'admin' || userData.username === 'admin') {
+          // Special case: if user is admin but no department, give all permissions
+          userPermissions = ['all'];
+        }
+        
+        console.log('Auth check successful:', {
+          user: userData.username,
+          department: userData.department?.name || 'No Department',
+          permissions: userPermissions,
+          rawUserData: userData // Add this for debugging
+        });
+        
         setUser(userData);
-        setPermissions(userData.department?.permissions || []);
+        setPermissions(userPermissions);
         setIsAuthenticated(true);
       } else {
         localStorage.removeItem('authToken');
@@ -57,8 +77,19 @@ export const AuthProvider = ({ children }) => {
     if (response.data.success) {
       const { user: userData, token } = response.data.data;
       localStorage.setItem('authToken', token);
+      
+      // Handle permissions similar to checkAuth
+      let userPermissions = [];
+      if (userData.department && userData.department.permissions) {
+        userPermissions = userData.department.permissions;
+      } else if (userData.permissions) {
+        userPermissions = userData.permissions;
+      } else if (userData.role === 'admin' || userData.username === 'admin') {
+        userPermissions = ['all'];
+      }
+      
       setUser(userData);
-      setPermissions(userData.department?.permissions || []);
+      setPermissions(userPermissions);
       setIsAuthenticated(true);
       return userData;
     }
@@ -89,7 +120,8 @@ export const AuthProvider = ({ children }) => {
   };
 
   const hasPermission = (requiredPermission) => {
-    if (!requiredPermission) return true;
+    if (!requiredPermission || requiredPermission === 'any') return true;
+    if (!permissions || permissions.length === 0) return false;
     if (permissions.includes('all')) return true;
     return permissions.includes(requiredPermission);
   };

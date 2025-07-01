@@ -11,23 +11,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Settings as SettingsIcon, Info, Database, AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { usePageData } from '@/hooks/usePageData';
 
 const Settings = () => {
-  const { data, updateSettings, resetData, fetchDataByKey, loadingStates } = useData();
+  const { data, isLoading } = usePageData(['settings']);
+  const { updateSettings, resetData } = useData();
   const { toast } = useToast();
   const [settings, setSettings] = useState(data.settings);
-
-  useEffect(() => {
-    fetchDataByKey('settings');
-  }, [fetchDataByKey]);
 
   useEffect(() => {
     if (data.settings) {
       setSettings(data.settings);
     }
   }, [data.settings]);
-  
-  const isLoading = loadingStates.settings !== false;
 
   const handleInputChange = (e) => {
     const { id, value } = e.target;

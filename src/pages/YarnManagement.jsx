@@ -1,149 +1,363 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useData } from '@/contexts/DataContext';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { usePageData } from '@/hooks/usePageData';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Plus, Package, TrendingUp, AlertTriangle } from 'lucide-react';
+import { useData } from '@/contexts/DataContext';
 import { useToast } from '@/components/ui/use-toast';
-import { PlusCircle, MinusCircle, ShoppingCart } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import TableSkeleton from '@/components/layout/TableSkeleton';
+import PageLoader from '@/components/common/PageLoader';
 
 const YarnManagement = () => {
-  const { data, receiveYarn, issueYarn, purchaseYarn, fetchDataByKey, loadingStates } = useData();
+  const { data, isLoading } = usePageData(['yarnStock', 'yarnQualities', 'suppliers', 'stockLocations']);
+  const { receiveYarn, purchaseYarn, issueYarn } = useData();
   const { toast } = useToast();
   
-  const [receiveData, setReceiveData] = useState({ contractId: '', yarnQualityId: '', quantityBags: '', quantityKg: '', type: 'weft', locationId: '' });
-  const [issueData, setIssueData] = useState({ yarnStockId: '', quantityKg: '', purpose: '' });
-  const [purchaseData, setPurchaseData] = useState({ supplierId: '', yarnQualityId: '', quantityBags: '', quantityKg: '', type: 'weft', locationId: '' });
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogType, setDialogType] = useState('');
+  const [formData, setFormData] = useState({
+    quality_id: '',
+    supplier_id: '',
+    location_id: '',
+    quantity_kg: '',
+    rate_per_kg: '',
+    invoice_number: '',
+    received_date: new Date().toISOString().split('T')[0],
+    purpose: '',
+    issued_to: '',
+    issued_date: new Date().toISOString().split('T')[0]
+  });
 
-  useEffect(() => {
-    fetchDataByKey('yarnStock');
-    fetchDataByKey('contracts');
-    fetchDataByKey('yarnQualities');
-    fetchDataByKey('stockLocations');
-    fetchDataByKey('suppliers');
-  }, [fetchDataByKey]);
+  if (isLoading) {
+    return <PageLoader />;
+  }
 
-  const isLoading = loadingStates.yarnStock !== false;
-
-  const handleReceiveSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    receiveYarn(receiveData);
-    setReceiveData({ contractId: '', yarnQualityId: '', quantityBags: '', quantityKg: '', type: 'weft', locationId: '' });
+    try {
+      if (dialogType === 'receive') {
+        await receiveYarn(formData);
+      } else if (dialogType === 'purchase') {
+        await purchaseYarn(formData);
+      } else if (dialogType === 'issue') {
+        await issueYarn(formData);
+      }
+      setDialogOpen(false);
+      resetForm();
+    } catch (error) {
+      console.error('Error:', error);
+    }
   };
 
-  const handleIssueSubmit = (e) => {
-    e.preventDefault();
-    issueYarn(issueData);
-    setIssueData({ yarnStockId: '', quantityKg: '', purpose: '' });
+  const resetForm = () => {
+    setFormData({
+      quality_id: '',
+      supplier_id: '',
+      location_id: '',
+      quantity_kg: '',
+      rate_per_kg: '',
+      invoice_number: '',
+      received_date: new Date().toISOString().split('T')[0],
+      purpose: '',
+      issued_to: '',
+      issued_date: new Date().toISOString().split('T')[0]
+    });
   };
 
-  const handlePurchaseSubmit = (e) => {
-    e.preventDefault();
-    purchaseYarn(purchaseData);
-    setPurchaseData({ supplierId: '', yarnQualityId: '', quantityBags: '', quantityKg: '', type: 'weft', locationId: '' });
+  const openDialog = (type) => {
+    setDialogType(type);
+    setDialogOpen(true);
+    resetForm();
   };
+
+  const totalStock = Array.isArray(data.yarnStock) ? data.yarnStock.reduce((sum, yarn) => sum + parseFloat(yarn.quantity_kg || 0), 0) : 0;
+  const totalValue = Array.isArray(data.yarnStock) ? data.yarnStock.reduce((sum, yarn) => sum + (parseFloat(yarn.quantity_kg || 0) * parseFloat(yarn.rate_per_kg || 0)), 0) : 0;
+  const lowStockItems = Array.isArray(data.yarnStock) ? data.yarnStock.filter(yarn => parseFloat(yarn.quantity_kg || 0) < 100) : [];
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-      <Tabs defaultValue="stock">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="stock">Yarn Stock</TabsTrigger>
-          <TabsTrigger value="receive">Receive Yarn</TabsTrigger>
-          <TabsTrigger value="issue">Issue Yarn</TabsTrigger>
-          <TabsTrigger value="purchase">Purchase Yarn</TabsTrigger>
-        </TabsList>
-        <TabsContent value="stock" className="mt-4">
-          <Card>
-            <CardHeader><CardTitle>Current Yarn Stock</CardTitle><CardDescription>Live view of all yarn inventory.</CardDescription></CardHeader>
-            <CardContent>
-              {isLoading ? <TableSkeleton rows={10} cells={6} /> : (
-                <Table>
-                  <TableHeader><TableRow><TableHead>Contract</TableHead><TableHead>Yarn Quality</TableHead><TableHead>Type</TableHead><TableHead>Bags</TableHead><TableHead>KG</TableHead><TableHead>Location</TableHead></TableRow></TableHeader>
-                  <TableBody>
-                    {data.yarnStock.map(stock => {
-                      const contract = data.contracts.find(c => c.id === stock.contractId);
-                      const yarn = data.yarnQualities.find(y => y.id === stock.yarnQualityId);
-                      const location = data.stockLocations.find(l => l.id === stock.locationId);
-                      return (
-                        <TableRow key={stock.id}>
-                          <TableCell>{contract?.name || contract?.id}</TableCell>
-                          <TableCell>{yarn ? `${yarn.count} ${yarn.ratio}` : 'N/A'}</TableCell>
-                          <TableCell>{stock.type}</TableCell>
-                          <TableCell>{stock.quantityBags}</TableCell>
-                          <TableCell>{stock.quantityKg}</TableCell>
-                          <TableCell>{location?.name}</TableCell>
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="receive" className="mt-4">
-          <Card className="max-w-2xl mx-auto">
-            <CardHeader>
-              <CardTitle>Receive Yarn</CardTitle>
-              <CardDescription>Log new yarn received from clients.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleReceiveSubmit} className="space-y-4">
-                <Select onValueChange={v => setReceiveData({...receiveData, contractId: v})}><SelectTrigger><SelectValue placeholder="Select Contract" /></SelectTrigger><SelectContent>{data.contracts.filter(c=>!c.isInternal).map(c=><SelectItem key={c.id} value={c.id}>{c.id}</SelectItem>)}</SelectContent></Select>
-                <Select onValueChange={v => setReceiveData({...receiveData, yarnQualityId: v})}><SelectTrigger><SelectValue placeholder="Select Yarn Quality" /></SelectTrigger><SelectContent>{data.yarnQualities.map(y=><SelectItem key={y.id} value={y.id}>{y.count} {y.ratio}</SelectItem>)}</SelectContent></Select>
-                <Select onValueChange={v => setReceiveData({...receiveData, type: v})}><SelectTrigger><SelectValue placeholder="Select Yarn Type" /></SelectTrigger><SelectContent><SelectItem value="warp">Warp</SelectItem><SelectItem value="weft">Weft</SelectItem></SelectContent></Select>
-                <Select onValueChange={v => setReceiveData({...receiveData, locationId: v})}><SelectTrigger><SelectValue placeholder="Select Stock Location" /></SelectTrigger><SelectContent>{data.stockLocations.map(l=><SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent></Select>
-                <Input type="number" placeholder="Quantity in Bags" onChange={e => setReceiveData({...receiveData, quantityBags: e.target.value})} required />
-                <Input type="number" placeholder="Quantity in KG" onChange={e => setReceiveData({...receiveData, quantityKg: e.target.value})} required />
-                <Button type="submit" className="w-full"><PlusCircle className="mr-2 h-4 w-4"/>Receive Yarn</Button>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="issue" className="mt-4">
-          <Card className="max-w-2xl mx-auto">
-            <CardHeader>
-              <CardTitle>Issue Yarn</CardTitle>
-              <CardDescription>Issue yarn for production or other purposes.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleIssueSubmit} className="space-y-4">
-                <Select onValueChange={v => setIssueData({...issueData, yarnStockId: v})}><SelectTrigger><SelectValue placeholder="Select Yarn Stock" /></SelectTrigger><SelectContent>{data.yarnStock.map(y => {
-                  const quality = data.yarnQualities.find(q => q.id === y.yarnQualityId);
-                  return <SelectItem key={y.id} value={y.id}>{quality?.count} - {y.quantityKg}kg</SelectItem>
-                })}</SelectContent></Select>
-                <Input placeholder="Purpose (e.g., Warping, Production)" onChange={e => setIssueData({...issueData, purpose: e.target.value})} required />
-                <Input type="number" placeholder="Quantity in KG" onChange={e => setIssueData({...issueData, quantityKg: e.target.value})} required />
-                <Button type="submit" className="w-full"><MinusCircle className="mr-2 h-4 w-4"/>Issue Yarn</Button>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="purchase" className="mt-4">
-          <Card className="max-w-2xl mx-auto">
-            <CardHeader>
-              <CardTitle>Purchase Yarn</CardTitle>
-              <CardDescription>Log new yarn purchased from suppliers.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handlePurchaseSubmit} className="space-y-4">
-                <Select onValueChange={v => setPurchaseData({...purchaseData, supplierId: v})}><SelectTrigger><SelectValue placeholder="Select Supplier" /></SelectTrigger><SelectContent>{data.suppliers.map(s=><SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent></Select>
-                <Select onValueChange={v => setPurchaseData({...purchaseData, yarnQualityId: v})}><SelectTrigger><SelectValue placeholder="Select Yarn Quality" /></SelectTrigger><SelectContent>{data.yarnQualities.map(y=><SelectItem key={y.id} value={y.id}>{y.count} {y.ratio}</SelectItem>)}</SelectContent></Select>
-                <Select onValueChange={v => setPurchaseData({...purchaseData, type: v})}><SelectTrigger><SelectValue placeholder="Select Yarn Type" /></SelectTrigger><SelectContent><SelectItem value="warp">Warp</SelectItem><SelectItem value="weft">Weft</SelectItem></SelectContent></Select>
-                <Select onValueChange={v => setPurchaseData({...purchaseData, locationId: v})}><SelectTrigger><SelectValue placeholder="Select Stock Location" /></SelectTrigger><SelectContent>{data.stockLocations.map(l=><SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent></Select>
-                <Input type="number" placeholder="Quantity in Bags" onChange={e => setPurchaseData({...purchaseData, quantityBags: e.target.value})} required />
-                <Input type="number" placeholder="Quantity in KG" onChange={e => setPurchaseData({...purchaseData, quantityKg: e.target.value})} required />
-                <Button type="submit" className="w-full"><ShoppingCart className="mr-2 h-4 w-4"/>Purchase Yarn</Button>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="space-y-6"
+    >
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Yarn Management</h2>
+          <p className="text-muted-foreground">Manage yarn inventory, purchases, and issues</p>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={() => openDialog('receive')}>
+            <Plus className="mr-2 h-4 w-4" />
+            Receive Yarn
+          </Button>
+          <Button onClick={() => openDialog('purchase')} variant="outline">
+            <Plus className="mr-2 h-4 w-4" />
+            Purchase Yarn
+          </Button>
+          <Button onClick={() => openDialog('issue')} variant="outline">
+            <Plus className="mr-2 h-4 w-4" />
+            Issue Yarn
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Stock</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalStock.toFixed(2)} kg</div>
+            <p className="text-xs text-muted-foreground">All yarn qualities</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Value</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₹{totalValue.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Current inventory value</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Yarn Qualities</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{Array.isArray(data.yarnQualities) ? data.yarnQualities.length : 0}</div>
+            <p className="text-xs text-muted-foreground">Available qualities</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Low Stock Alert</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{lowStockItems.length}</div>
+            <p className="text-xs text-muted-foreground">Items below 100kg</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Current Yarn Stock</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Quality</TableHead>
+                <TableHead>Supplier</TableHead>
+                <TableHead>Location</TableHead>
+                <TableHead>Quantity (kg)</TableHead>
+                <TableHead>Rate/kg</TableHead>
+                <TableHead>Total Value</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {Array.isArray(data.yarnStock) && data.yarnStock.map((yarn) => {
+                const quality = Array.isArray(data.yarnQualities) ? data.yarnQualities.find(q => q.id === yarn.quality_id) : null;
+                const supplier = Array.isArray(data.suppliers) ? data.suppliers.find(s => s.id === yarn.supplier_id) : null;
+                const location = Array.isArray(data.stockLocations) ? data.stockLocations.find(l => l.id === yarn.location_id) : null;
+                const quantity = parseFloat(yarn.quantity_kg || 0);
+                const rate = parseFloat(yarn.rate_per_kg || 0);
+                
+                return (
+                  <TableRow key={yarn.id}>
+                    <TableCell className="font-medium">{quality?.name || 'Unknown'}</TableCell>
+                    <TableCell>{supplier?.name || 'Unknown'}</TableCell>
+                    <TableCell>{location?.name || 'Unknown'}</TableCell>
+                    <TableCell>{quantity.toFixed(2)}</TableCell>
+                    <TableCell>₹{rate.toFixed(2)}</TableCell>
+                    <TableCell>₹{(quantity * rate).toLocaleString()}</TableCell>
+                    <TableCell>
+                      <Badge variant={quantity < 100 ? 'destructive' : quantity < 500 ? 'secondary' : 'default'}>
+                        {quantity < 100 ? 'Low Stock' : quantity < 500 ? 'Medium' : 'Good Stock'}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>
+              {dialogType === 'receive' && 'Receive Yarn'}
+              {dialogType === 'purchase' && 'Purchase Yarn'}
+              {dialogType === 'issue' && 'Issue Yarn'}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="quality_id">Yarn Quality</Label>
+              <Select value={formData.quality_id} onValueChange={(value) => setFormData({...formData, quality_id: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select quality" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.isArray(data.yarnQualities) && data.yarnQualities.map((quality) => (
+                    <SelectItem key={quality.id} value={quality.id.toString()}>
+                      {quality.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {(dialogType === 'receive' || dialogType === 'purchase') && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="supplier_id">Supplier</Label>
+                  <Select value={formData.supplier_id} onValueChange={(value) => setFormData({...formData, supplier_id: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select supplier" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.isArray(data.suppliers) && data.suppliers.map((supplier) => (
+                        <SelectItem key={supplier.id} value={supplier.id.toString()}>
+                          {supplier.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="invoice_number">Invoice Number</Label>
+                  <Input
+                    id="invoice_number"
+                    value={formData.invoice_number}
+                    onChange={(e) => setFormData({...formData, invoice_number: e.target.value})}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="received_date">Received Date</Label>
+                  <Input
+                    id="received_date"
+                    type="date"
+                    value={formData.received_date}
+                    onChange={(e) => setFormData({...formData, received_date: e.target.value})}
+                    required
+                  />
+                </div>
+              </>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="location_id">Location</Label>
+              <Select value={formData.location_id} onValueChange={(value) => setFormData({...formData, location_id: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select location" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.isArray(data.stockLocations) && data.stockLocations.map((location) => (
+                    <SelectItem key={location.id} value={location.id.toString()}>
+                      {location.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="quantity_kg">Quantity (kg)</Label>
+              <Input
+                id="quantity_kg"
+                type="number"
+                step="0.01"
+                value={formData.quantity_kg}
+                onChange={(e) => setFormData({...formData, quantity_kg: e.target.value})}
+                required
+              />
+            </div>
+
+            {(dialogType === 'receive' || dialogType === 'purchase') && (
+              <div className="space-y-2">
+                <Label htmlFor="rate_per_kg">Rate per kg (₹)</Label>
+                <Input
+                  id="rate_per_kg"
+                  type="number"
+                  step="0.01"
+                  value={formData.rate_per_kg}
+                  onChange={(e) => setFormData({...formData, rate_per_kg: e.target.value})}
+                  required
+                />
+              </div>
+            )}
+
+            {dialogType === 'issue' && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="purpose">Purpose</Label>
+                  <Input
+                    id="purpose"
+                    value={formData.purpose}
+                    onChange={(e) => setFormData({...formData, purpose: e.target.value})}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="issued_to">Issued To</Label>
+                  <Input
+                    id="issued_to"
+                    value={formData.issued_to}
+                    onChange={(e) => setFormData({...formData, issued_to: e.target.value})}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="issued_date">Issue Date</Label>
+                  <Input
+                    id="issued_date"
+                    type="date"
+                    value={formData.issued_date}
+                    onChange={(e) => setFormData({...formData, issued_date: e.target.value})}
+                    required
+                  />
+                </div>
+              </>
+            )}
+
+            <div className="flex justify-end space-x-2">
+              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                {dialogType === 'receive' && 'Receive'}
+                {dialogType === 'purchase' && 'Purchase'}
+                {dialogType === 'issue' && 'Issue'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 };

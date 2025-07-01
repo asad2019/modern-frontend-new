@@ -15,7 +15,7 @@ const Sidebar = () => {
       { to: '/dashboard', icon: Home, label: 'Admin Dashboard', perm: 'all' },
       { to: '/production-dashboard', icon: Factory, label: 'Production', perm: 'production-dashboard' },
       { to: '/processing-dashboard', icon: Scissors, label: 'Processing', perm: 'processing-dashboard' },
-      
+
       { type: 'divider', label: 'Management', perm: 'any' },
       { to: '/contracts', icon: FileText, label: 'Contracts', perm: 'contracts' },
       { to: '/clients', icon: Users, label: 'Clients', perm: 'clients' },
@@ -25,13 +25,13 @@ const Sidebar = () => {
       { to: '/sizing', icon: GitBranch, label: 'Sizing Accounts', perm: 'clients' },
       { to: '/stock', icon: Package, label: 'Stock Locations', perm: 'all' },
       { to: '/qualities', icon: Layers, label: 'Qualities', perm: 'qualities' },
-      
+
       { type: 'divider', label: 'Operations', perm: 'any' },
       { to: '/yarn', icon: Beaker, label: 'Yarn Management', perm: 'yarn' },
       { to: '/fabric', icon: Shirt, label: 'Fabric Management', perm: 'yarn' },
       { to: '/daily-production', icon: PackagePlus, label: 'Daily Production', perm: 'daily-production' },
       { to: '/transactions', icon: Repeat, label: 'Transactions', perm: 'transactions' },
-      
+
       { type: 'divider', label: 'Assets & QC', perm: 'any' },
       { to: '/looms', icon: Anchor, label: 'Looms', perm: 'production-dashboard' },
       { to: '/machines', icon: HardHat, label: 'Machines', perm: 'machines' },

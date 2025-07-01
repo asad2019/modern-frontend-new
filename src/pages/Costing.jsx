@@ -1,7 +1,6 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { useData } from '@/contexts/DataContext';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,22 +8,16 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DollarSign, Zap } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { usePageData } from '@/hooks/usePageData';
 
 const Costing = () => {
-    const { data, fetchDataByKey, loadingStates } = useData();
+    const { data, isLoading } = usePageData(['fabricQualities', 'yarnQualities']);
     const [selectedFabric, setSelectedFabric] = useState('');
     const [requiredMeters, setRequiredMeters] = useState(1000);
     const [cost, setCost] = useState(null);
 
-    useEffect(() => {
-        fetchDataByKey('fabricQualities');
-        fetchDataByKey('yarnQualities');
-    }, [fetchDataByKey]);
-
-    const isLoading = loadingStates.fabricQualities !== false || loadingStates.yarnQualities !== false;
-
     const calculation = useMemo(() => {
-        if (!selectedFabric || !requiredMeters || isLoading) return null;
+        if (!selectedFabric || !requiredMeters || isLoading || !data.fabricQualities || !data.yarnQualities) return null;
 
         const fabric = data.fabricQualities.find(f => f.id === selectedFabric);
         if (!fabric) return null;
@@ -82,7 +75,7 @@ const Costing = () => {
                             <Select onValueChange={setSelectedFabric} value={selectedFabric}>
                                 <SelectTrigger><SelectValue placeholder="Select a fabric quality" /></SelectTrigger>
                                 <SelectContent>
-                                    {data.fabricQualities.map(fq => <SelectItem key={fq.id} value={fq.id}>{fq.name}</SelectItem>)}
+                                    {data.fabricQualities?.map(fq => <SelectItem key={fq.id} value={fq.id}>{fq.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                         </div>

@@ -35,7 +35,10 @@ const endpointMap = {
 export const DataProvider = ({ children }) => {
     const { toast } = useToast();
     const { isAuthenticated } = useAuth();
-    const [data, setData] = useState(Object.keys(endpointMap).reduce((acc, key) => ({...acc, [key]: []}), {}));
+    const [data, setData] = useState(Object.keys(endpointMap).reduce((acc, key) => ({
+        ...acc, 
+        [key]: key === 'settings' ? {} : []
+    }), {}));
     const [loadingStates, setLoadingStates] = useState({});
     const loadedKeysRef = useRef(new Set());
     const loadingPromisesRef = useRef(new Map());
@@ -71,30 +74,51 @@ export const DataProvider = ({ children }) => {
 
         // Create promises for each key
         const loadPromises = needToLoad.map(async (key) => {
-            const promise = api.get(`/${endpointMap[key]}`).catch(err => {
+            try {
+                const response = await api.get(`/${endpointMap[key]}`);
+                return { key, response, success: true };
+            } catch (err) {
                 console.error(`Failed to fetch ${key}:`, err);
                 toast({ 
                     title: `Error loading ${key}`, 
                     description: 'Could not load required data.', 
                     variant: 'destructive' 
                 });
-                return { data: { data: key === 'settings' ? {} : [] }};
-            });
-            
-            loadingPromisesRef.current.set(key, promise);
-            return { key, promise };
+                return { 
+                    key, 
+                    response: { data: { data: key === 'settings' ? {} : [] } }, 
+                    success: false 
+                };
+            }
+        });
+
+        // Store promises for deduplication
+        needToLoad.forEach((key, index) => {
+            loadingPromisesRef.current.set(key, loadPromises[index]);
         });
 
         try {
-            const results = await Promise.all(loadPromises.map(({ promise }) => promise));
+            const results = await Promise.all(loadPromises);
             
             // Update data
             setData(prevData => {
                 const newData = { ...prevData };
-                results.forEach((response, index) => {
-                    const key = needToLoad[index];
-                    newData[key] = response.data.data ?? (key === 'settings' ? {} : []);
-                    loadedKeysRef.current.add(key);
+                results.forEach(({ key, response, success }) => {
+                    // Safely extract data with fallbacks
+                    let responseData;
+                    if (response && response.data && typeof response.data === 'object') {
+                        responseData = response.data.data;
+                    }
+                    
+                    // Provide fallback values
+                    if (responseData === undefined || responseData === null) {
+                        responseData = key === 'settings' ? {} : [];
+                    }
+                    
+                    newData[key] = responseData;
+                    if (success) {
+                        loadedKeysRef.current.add(key);
+                    }
                 });
                 return newData;
             });
@@ -136,10 +160,15 @@ export const DataProvider = ({ children }) => {
     // Clear data when not authenticated
     React.useEffect(() => {
         if (!isAuthenticated) {
-            setData(Object.keys(endpointMap).reduce((acc, key) => ({...acc, [key]: []}), {}));
+            setData(Object.keys(endpointMap).reduce((acc, key) => ({
+                ...acc, 
+                [key]: key === 'settings' ? {} : []
+            }), {}));
             loadedKeysRef.current.clear();
             loadingPromisesRef.current.clear();
             setLoadingStates({});
+        } else {
+            console.log('User authenticated, DataContext ready');
         }
     }, [isAuthenticated]);
 

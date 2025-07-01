@@ -20,33 +20,33 @@ const Dashboard = () => {
   const stats = [
     {
       title: "Total Clients",
-      value: data.clients?.length || 0,
+      value: Array.isArray(data.clients) ? data.clients.length : 0,
       icon: Users,
       description: "Active clients in system"
     },
     {
       title: "Active Contracts",
-      value: data.contracts?.filter(c => c.status === 'In Process').length || 0,
+      value: Array.isArray(data.contracts) ? data.contracts.filter(c => c.status === 'In Process').length : 0,
       icon: FileText,
       description: "Contracts in progress"
     },
     {
       title: "Active Looms",
-      value: data.looms?.filter(l => l.status === 'Active').length || 0,
+      value: Array.isArray(data.looms) ? data.looms.filter(l => l.status === 'Active').length : 0,
       icon: Factory,
       description: "Currently operational"
     },
     {
       title: "Total Machines",
-      value: data.machines?.length || 0,
+      value: Array.isArray(data.machines) ? data.machines.length : 0,
       icon: Package,
       description: "All factory machines"
     }
   ];
 
-  const recentActivities = data.activityLog?.slice(0, 5) || [];
-  const pendingMaintenance = data.maintenanceSchedules?.filter(m => m.status === 'Scheduled').length || 0;
-  const qcFailures = data.qcRecords?.filter(q => q.status === 'Fail').length || 0;
+  const recentActivities = Array.isArray(data.activityLog) ? data.activityLog.slice(0, 5) : [];
+  const pendingMaintenance = Array.isArray(data.maintenanceSchedules) ? data.maintenanceSchedules.filter(m => m.status === 'Scheduled').length : 0;
+  const qcFailures = Array.isArray(data.qcRecords) ? data.qcRecords.filter(q => q.status === 'Fail').length : 0;
 
   return (
     <motion.div

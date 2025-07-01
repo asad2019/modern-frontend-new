@@ -14,8 +14,8 @@ const ActivityLog = () => {
         return new Date(timestamp).toLocaleString();
     }
     
-    const logs = data?.activityLog || [];
-    const users = data?.users || [];
+    const logs = (data?.activityLog && Array.isArray(data.activityLog)) ? data.activityLog : [];
+    const users = (data?.users && Array.isArray(data.users)) ? data.users : [];
 
     const getUserName = (userId) => {
         const user = users.find(u => u.id === userId);
