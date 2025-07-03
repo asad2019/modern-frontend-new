@@ -116,19 +116,8 @@ const YarnManagement = () => {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalStock.toFixed(2)} kg</div>
+            <div className="text-2xl font-bold">{totalStock.toFixed(2)} bags</div>
             <p className="text-xs text-muted-foreground">All yarn qualities</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Value</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">₹{totalValue.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Current inventory value</p>
           </CardContent>
         </Card>
         
@@ -140,17 +129,6 @@ const YarnManagement = () => {
           <CardContent>
             <div className="text-2xl font-bold">{Array.isArray(data.yarnQualities) ? data.yarnQualities.length : 0}</div>
             <p className="text-xs text-muted-foreground">Available qualities</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Low Stock Alert</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{lowStockItems.length}</div>
-            <p className="text-xs text-muted-foreground">Items below 100kg</p>
           </CardContent>
         </Card>
       </div>
@@ -166,9 +144,8 @@ const YarnManagement = () => {
                 <TableHead>Quality</TableHead>
                 <TableHead>Supplier</TableHead>
                 <TableHead>Location</TableHead>
-                <TableHead>Quantity (kg)</TableHead>
-                <TableHead>Rate/kg</TableHead>
-                <TableHead>Total Value</TableHead>
+                <TableHead>Quantity</TableHead>
+                <TableHead>Bags</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -186,8 +163,7 @@ const YarnManagement = () => {
                     <TableCell>{supplier?.name || 'Unknown'}</TableCell>
                     <TableCell>{location?.name || 'Unknown'}</TableCell>
                     <TableCell>{quantity.toFixed(2)}</TableCell>
-                    <TableCell>₹{rate.toFixed(2)}</TableCell>
-                    <TableCell>₹{(quantity * rate).toLocaleString()}</TableCell>
+                    <TableCell>{rate.toFixed(2)}</TableCell>
                     <TableCell>
                       <Badge variant={quantity < 100 ? 'destructive' : quantity < 500 ? 'secondary' : 'default'}>
                         {quantity < 100 ? 'Low Stock' : quantity < 500 ? 'Medium' : 'Good Stock'}
@@ -298,7 +274,7 @@ const YarnManagement = () => {
 
             {(dialogType === 'receive' || dialogType === 'purchase') && (
               <div className="space-y-2">
-                <Label htmlFor="rate_per_kg">Rate per kg (₹)</Label>
+                <Label htmlFor="rate_per_kg">Rate per kg</Label>
                 <Input
                   id="rate_per_kg"
                   type="number"

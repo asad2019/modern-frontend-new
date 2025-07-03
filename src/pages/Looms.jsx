@@ -19,7 +19,14 @@ const Looms = () => {
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editingLoom, setEditingLoom] = useState(null);
-  const [newLoom, setNewLoom] = useState({ name: '', status: 'Inactive', fabric_quality_id: null, contract_id: null });
+  const [newLoom, setNewLoom] = useState({ 
+    name: '', 
+    type: '', 
+    rpm: '', 
+    status: 'Inactive', 
+    fabric_quality_id: null, 
+    contract_id: null 
+  });
 
   const handleInputChange = (e, isEdit = false) => {
     const { id, value } = e.target;
@@ -41,7 +48,14 @@ const Looms = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     addData('looms', newLoom);
-    setNewLoom({ name: '', status: 'Inactive', fabric_quality_id: null, contract_id: null });
+    setNewLoom({ 
+      name: '', 
+      type: '', 
+      rpm: '', 
+      status: 'Inactive', 
+      fabric_quality_id: null, 
+      contract_id: null 
+    });
     setOpen(false);
   };
 
@@ -85,7 +99,28 @@ const Looms = () => {
             <DialogContent>
               <DialogHeader><DialogTitle>Add a New Loom</DialogTitle></DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4 py-4">
-                <Input id="name" placeholder="Loom Name (e.g. Loom 004)" value={newLoom.name} onChange={handleInputChange} required />
+                <Input 
+                  id="name" 
+                  placeholder="Loom Name (e.g. Loom 004)" 
+                  value={newLoom.name} 
+                  onChange={handleInputChange} 
+                  required 
+                />
+                <Input 
+                  id="type" 
+                  placeholder="Loom Type (e.g. Air Jet, Rapier)" 
+                  value={newLoom.type} 
+                  onChange={handleInputChange} 
+                  required 
+                />
+                <Input 
+                  id="rpm" 
+                  type="number" 
+                  placeholder="Loom RPM" 
+                  value={newLoom.rpm} 
+                  onChange={handleInputChange} 
+                  required 
+                />
                 <Select onValueChange={v => handleSelectChange('status', v)} value={newLoom.status}>
                   <SelectTrigger><SelectValue placeholder="Select Status" /></SelectTrigger>
                   <SelectContent>
@@ -101,7 +136,15 @@ const Looms = () => {
         </CardHeader>
         <CardContent>
           <Table>
-            <TableHeader><TableRow><TableHead>Loom Name</TableHead><TableHead>Status</TableHead><TableHead>Current Quality</TableHead><TableHead>Contract</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Loom Name</TableHead>
+                <TableHead>Loom Type</TableHead>
+                <TableHead>RPM</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
             <TableBody>
               {data.looms?.map((loom) => {
                 const quality = data.fabricQualities?.find(q => q.id === loom.fabric_quality_id);
@@ -109,11 +152,11 @@ const Looms = () => {
                 return (
                   <TableRow key={loom.id}>
                     <TableCell className="font-medium">{loom.name}</TableCell>
+                    <TableCell>{loom.type || 'N/A'}</TableCell>
+                    <TableCell>{loom.rpm || 'N/A'}</TableCell>
                     <TableCell>
                       <Badge variant={loom.status === 'Active' ? 'default' : 'secondary'}>{loom.status}</Badge>
                     </TableCell>
-                    <TableCell>{quality?.name || 'N/A'}</TableCell>
-                    <TableCell>{contract?.id || 'N/A'}</TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
                         <Button variant="ghost" size="sm" onClick={() => handleEdit(loom)}><Edit className="h-4 w-4" /></Button>
@@ -132,7 +175,28 @@ const Looms = () => {
           <DialogHeader><DialogTitle>Edit Loom</DialogTitle></DialogHeader>
           {editingLoom && (
             <form onSubmit={handleUpdate} className="space-y-4 py-4">
-              <Input id="name" placeholder="Loom Name" value={editingLoom.name} onChange={(e) => handleInputChange(e, true)} required />
+              <Input 
+                id="name" 
+                placeholder="Loom Name" 
+                value={editingLoom.name} 
+                onChange={(e) => handleInputChange(e, true)} 
+                required 
+              />
+              <Input 
+                id="type" 
+                placeholder="Loom Type" 
+                value={editingLoom.type || ''} 
+                onChange={(e) => handleInputChange(e, true)} 
+                required 
+              />
+              <Input 
+                id="rpm" 
+                type="number" 
+                placeholder="Loom RPM" 
+                value={editingLoom.rpm || ''} 
+                onChange={(e) => handleInputChange(e, true)} 
+                required 
+              />
               <Select onValueChange={v => handleSelectChange('status', v, true)} value={editingLoom.status}>
                 <SelectTrigger><SelectValue placeholder="Select Status" /></SelectTrigger>
                 <SelectContent>
@@ -141,18 +205,6 @@ const Looms = () => {
                   <SelectItem value="Maintenance">Maintenance</SelectItem>
                 </SelectContent>
               </Select>
-              {editingLoom.status === 'Active' && (
-                <>
-                  <Select onValueChange={v => handleSelectChange('fabric_quality_id', v, true)} value={editingLoom.fabric_quality_id || ''}>
-                    <SelectTrigger><SelectValue placeholder="Assign Fabric Quality" /></SelectTrigger>
-                    <SelectContent>{data.fabricQualities?.map(q => <SelectItem key={q.id} value={q.id}>{q.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                  <Select onValueChange={v => handleSelectChange('contract_id', v, true)} value={editingLoom.contract_id || ''}>
-                    <SelectTrigger><SelectValue placeholder="Assign Contract" /></SelectTrigger>
-                    <SelectContent>{data.contracts?.filter(c => c.status === 'In Process').map(c => <SelectItem key={c.id} value={c.id}>{c.id}</SelectItem>)}</SelectContent>
-                  </Select>
-                </>
-              )}
               <DialogFooter><Button type="submit">Update Loom</Button></DialogFooter>
             </form>
           )}

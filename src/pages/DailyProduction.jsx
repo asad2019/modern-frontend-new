@@ -47,8 +47,8 @@ const DailyProduction = () => {
                     <Select onValueChange={v => setFormData({...formData, loom_id: v})} value={formData.loom_id}><SelectTrigger><SelectValue placeholder="Select Active Loom" /></SelectTrigger><SelectContent>{activeLooms.map(l=><SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent></Select>
                     <Select onValueChange={v => setFormData({...formData, contract_id: v})} value={formData.contract_id}><SelectTrigger><SelectValue placeholder="Select Contract" /></SelectTrigger><SelectContent>{data.contracts?.filter(c => !c.is_internal).map(c=><SelectItem key={c.id} value={c.id}>{c.id}</SelectItem>)}</SelectContent></Select>
                     <Select onValueChange={v => setFormData({...formData, fabric_quality_id: v})} value={formData.fabric_quality_id}><SelectTrigger><SelectValue placeholder="Select Fabric Quality" /></SelectTrigger><SelectContent>{data.fabricQualities?.map(f=><SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}</SelectContent></Select>
-                    <Input type="number" placeholder="Produced Meters" value={formData.produced_meters} onChange={e => setFormData({...formData, produced_meters: e.target.value})} required/>
-                    <Button type="submit" className="w-full"><PlusCircle className="mr-2 h-4 w-4" /> Add Production Log</Button>
+                    <Input type="number" placeholder="Quantity (Meters)" value={formData.produced_meters} onChange={e => setFormData({...formData, produced_meters: e.target.value})} required/>
+                    <Button type="submit" className="w-full"><PlusCircle className="mr-2 h-4 w-4" /> Add Production</Button>
                 </form>
             </CardContent>
         </Card>
@@ -58,7 +58,7 @@ const DailyProduction = () => {
             <CardHeader><CardTitle>Recent Production Logs</CardTitle><CardDescription>Last 10 production entries.</CardDescription></CardHeader>
             <CardContent>
                 <Table>
-                    <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Loom</TableHead><TableHead>Quality</TableHead><TableHead>Meters</TableHead></TableRow></TableHeader>
+                    <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Contract</TableHead><TableHead>Loom</TableHead><TableHead>Quality</TableHead><TableHead>Meters</TableHead></TableRow></TableHeader>
                     <TableBody>
                         {data.dailyProduction?.slice(0,10).map(p => {
                             const loom = data.looms?.find(l => l.id === p.loom_id);
@@ -66,6 +66,7 @@ const DailyProduction = () => {
                             return (
                                 <TableRow key={p.id}>
                                     <TableCell>{p.date}</TableCell>
+                                    <TableCell>{p.contract_id}</TableCell>
                                     <TableCell>{loom?.name}</TableCell>
                                     <TableCell>{quality?.name}</TableCell>
                                     <TableCell>{p.produced_meters}m</TableCell>

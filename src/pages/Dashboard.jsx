@@ -37,10 +37,10 @@ const Dashboard = () => {
       description: "Currently operational"
     },
     {
-      title: "Total Machines",
-      value: Array.isArray(data.machines) ? data.machines.length : 0,
+      title: "Total Stock Locations",
+      value: Array.isArray(data.stockLocations) ? data.stockLocations.length : 0,
       icon: Package,
-      description: "All factory machines"
+      description: "All stock locations"
     }
   ];
 
@@ -88,7 +88,7 @@ const Dashboard = () => {
         ))}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-1">
         <Card className="col-span-4">
           <CardHeader>
             <CardTitle>Recent Activities</CardTitle>
@@ -113,52 +113,6 @@ const Dashboard = () => {
                 </div>
               )) : (
                 <p className="text-sm text-muted-foreground">No recent activities</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="col-span-3">
-          <CardHeader>
-            <CardTitle>System Alerts</CardTitle>
-            <CardDescription>Important notifications and warnings</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {pendingMaintenance > 0 && (
-                <div className="flex items-center space-x-4 p-3 bg-yellow-50 rounded-lg">
-                  <Clock className="h-5 w-5 text-yellow-600" />
-                  <div>
-                    <p className="text-sm font-medium">Pending Maintenance</p>
-                    <p className="text-sm text-muted-foreground">
-                      {pendingMaintenance} machine(s) need maintenance
-                    </p>
-                  </div>
-                </div>
-              )}
-              
-              {qcFailures > 0 && (
-                <div className="flex items-center space-x-4 p-3 bg-red-50 rounded-lg">
-                  <AlertTriangle className="h-5 w-5 text-red-600" />
-                  <div>
-                    <p className="text-sm font-medium">Quality Issues</p>
-                    <p className="text-sm text-muted-foreground">
-                      {qcFailures} QC failure(s) need attention
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {pendingMaintenance === 0 && qcFailures === 0 && (
-                <div className="flex items-center space-x-4 p-3 bg-green-50 rounded-lg">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <div>
-                    <p className="text-sm font-medium">All Systems Normal</p>
-                    <p className="text-sm text-muted-foreground">
-                      No critical alerts at this time
-                    </p>
-                  </div>
-                </div>
               )}
             </div>
           </CardContent>

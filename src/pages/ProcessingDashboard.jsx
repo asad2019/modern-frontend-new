@@ -16,7 +16,7 @@ const ProcessingDashboard = () => {
     >
       <div>
         <h1 className="text-3xl font-bold">Processing Dashboard</h1>
-        <p className="text-muted-foreground">Manage the post-production workflow.</p>
+        <p className="text-muted-foreground">Manage the production workflow.</p>
       </div>
       <Tabs defaultValue="finishing" className="w-full">
         <TabsList className="grid w-full grid-cols-4">

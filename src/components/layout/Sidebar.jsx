@@ -25,6 +25,7 @@ const Sidebar = () => {
       { to: '/sizing', icon: GitBranch, label: 'Sizing Accounts', perm: 'clients' },
       { to: '/stock', icon: Package, label: 'Stock Locations', perm: 'all' },
       { to: '/qualities', icon: Layers, label: 'Qualities', perm: 'qualities' },
+      { to: '/looms', icon: Anchor, label: 'Looms', perm: 'production-dashboard' },
 
       { type: 'divider', label: 'Operations', perm: 'any' },
       { to: '/yarn', icon: Beaker, label: 'Yarn Management', perm: 'yarn' },
@@ -32,11 +33,11 @@ const Sidebar = () => {
       { to: '/daily-production', icon: PackagePlus, label: 'Daily Production', perm: 'daily-production' },
       { to: '/transactions', icon: Repeat, label: 'Transactions', perm: 'transactions' },
 
-      { type: 'divider', label: 'Assets & QC', perm: 'any' },
-      { to: '/looms', icon: Anchor, label: 'Looms', perm: 'production-dashboard' },
-      { to: '/machines', icon: HardHat, label: 'Machines', perm: 'machines' },
-      { to: '/maintenance', icon: Wrench, label: 'Maintenance', perm: 'maintenance' },
-      { to: '/quality-control', icon: ShieldCheck, label: 'Quality Control', perm: 'quality_control' },
+      // { type: 'divider', label: 'Assets & QC', perm: 'any' },
+      // { to: '/looms', icon: Anchor, label: 'Looms', perm: 'production-dashboard' },
+      // { to: '/machines', icon: HardHat, label: 'Machines', perm: 'machines' },
+      // { to: '/maintenance', icon: Wrench, label: 'Maintenance', perm: 'maintenance' },
+      // { to: '/quality-control', icon: ShieldCheck, label: 'Quality Control', perm: 'quality_control' },
 
       { type: 'divider', label: 'Finance & Reporting', perm: 'any' },
       { to: '/costing', icon: BarChart2, label: 'Costing', perm: 'all' },
@@ -48,7 +49,7 @@ const Sidebar = () => {
       { to: '/users', icon: Users, label: 'User Management', perm: 'all' },
       { to: '/departments', icon: Truck, label: 'Departments', perm: 'all' },
       { to: '/profile', icon: UserCircle, label: 'Profile', perm: 'any' },
-      { to: '/settings', icon: Settings, label: 'Settings', perm: 'settings' },
+      // { to: '/settings', icon: Settings, label: 'Settings', perm: 'settings' },
     ];
 
     const visibleNavItems = allNavItems.filter(item => {
