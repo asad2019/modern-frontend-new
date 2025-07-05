@@ -43,10 +43,10 @@ const FabricManagement = () => {
 
   // Calculate fresh fabric when KP# is selected
   const calculateFreshFabric = (kpId, aGrade, bGrade, cGrade) => {
-    const kpRecord = data.fabricStock?.find(f => f.id === kpId);
+    const kpRecord = data.fabricStock?.find(f => f.id === parseInt(kpId));
     if (!kpRecord) return 0;
     
-    const totalMeters = parseFloat(kpRecord.quantity_meters) || 0;
+    const totalMeters = parseFloat(kpRecord.total_meters || kpRecord.quantity_meters) || 0;
     const aGradeVal = parseFloat(aGrade) || 0;
     const bGradeVal = parseFloat(bGrade) || 0;
     const cGradeVal = parseFloat(cGrade) || 0;
@@ -54,49 +54,55 @@ const FabricManagement = () => {
     return totalMeters - (aGradeVal + bGradeVal + cGradeVal);
   };
 
-  // Calculate conversion charges and amounts
-  const calculateConversionCharges = (contractId) => {
-    const contract = data.contracts?.find(c => c.id === contractId);
-    return contract?.conversion_rate || 0;
+  // Calculate conversion charges from contract
+  const getConversionRateFromContract = (kpId) => {
+    const kpRecord = data.fabricStock?.find(f => f.id === parseInt(kpId));
+    if (!kpRecord) return 0;
+    
+    const contract = data.contracts?.find(c => c.id === kpRecord.contract_id);
+    return parseFloat(contract?.conversion_rate || contract?.conv_charges_per_pick) || 0;
   };
 
-  const calculateTotalAmount = (conversionCharges, totalMeters) => {
-    return (parseFloat(conversionCharges) || 0) * (parseFloat(totalMeters) || 0);
+  const calculateTotalAmount = (conversionCharges, freshFabric) => {
+    return (parseFloat(conversionCharges) || 0) * (parseFloat(freshFabric) || 0);
   };
 
   const handleReceiveInputChange = (field, value) => {
     setReceiveData(prev => {
       const updated = { ...prev, [field]: value };
       
-      // Auto-calculate fresh fabric
+      // Auto-calculate fresh fabric when grades change
       if (['kp_id', 'a_grade', 'b_grade', 'c_grade'].includes(field)) {
-        updated.fresh_fabric = calculateFreshFabric(
+        const freshFabric = calculateFreshFabric(
           updated.kp_id, 
           updated.a_grade, 
           updated.b_grade, 
           updated.c_grade
         );
-      }
-      
-      // Auto-calculate conversion charges and amounts
-      if (field === 'kp_id') {
-        const kpRecord = data.fabricStock?.find(f => f.id === value);
-        if (kpRecord) {
-          const contract = data.contracts?.find(c => c.id === kpRecord.contract_id);
-          if (contract) {
-            updated.conversion_charges_per_pick = contract.conversion_rate || 0;
-            updated.total_amount = calculateTotalAmount(
-              contract.conversion_rate, 
-              updated.fresh_fabric || kpRecord.quantity_meters
-            );
-            updated.net_total = (parseFloat(updated.total_amount) || 0) + (parseFloat(updated.income_tax_amount) || 0);
-          }
+        updated.fresh_fabric = freshFabric;
+        
+        // Recalculate total amount with fresh fabric
+        if (updated.conversion_charges_per_pick && freshFabric) {
+          updated.total_amount = calculateTotalAmount(updated.conversion_charges_per_pick, freshFabric);
+          updated.net_total = (parseFloat(updated.total_amount) || 0) + (parseFloat(updated.income_tax_amount) || 0);
         }
       }
       
-      // Recalculate total amount and net total when relevant fields change
-      if (['income_tax_amount', 'total_amount'].includes(field)) {
-        updated.net_total = (parseFloat(updated.total_amount) || 0) + (parseFloat(updated.income_tax_amount) || 0);
+      // Auto-calculate conversion charges when KP# is selected
+      if (field === 'kp_id' && value) {
+        const conversionRate = getConversionRateFromContract(value);
+        updated.conversion_charges_per_pick = conversionRate;
+        
+        // Calculate total amount with conversion rate and fresh fabric
+        if (conversionRate && updated.fresh_fabric) {
+          updated.total_amount = calculateTotalAmount(conversionRate, updated.fresh_fabric);
+          updated.net_total = (parseFloat(updated.total_amount) || 0) + (parseFloat(updated.income_tax_amount) || 0);
+        }
+      }
+      
+      // Recalculate net total when income tax changes
+      if (field === 'income_tax_amount') {
+        updated.net_total = (parseFloat(updated.total_amount) || 0) + (parseFloat(value) || 0);
       }
       
       return updated;
@@ -169,7 +175,18 @@ const FabricManagement = () => {
             <CardContent>
               {isLoading ? <PageLoader type="table" /> : (
                 <Table>
-                  <TableHeader><TableRow><TableHead>Contract</TableHead><TableHead>Fabric Quality</TableHead><TableHead>Meters</TableHead><TableHead>Location</TableHead><TableHead>Date</TableHead></TableRow></TableHeader>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>KP#</TableHead>
+                      <TableHead>Contract</TableHead>
+                      <TableHead>Quality</TableHead>
+                      <TableHead>Issue (m)</TableHead>
+                      <TableHead>Receive (m)</TableHead>
+                      <TableHead>Fresh Fabric (m)</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
                   <TableBody>
                     {data.fabricStock?.map(stock => {
                       const contract = data.contracts?.find(c => c.id === stock.contract_id);
@@ -177,11 +194,14 @@ const FabricManagement = () => {
                       const location = data.stockLocations?.find(l => l.id === stock.location_id);
                       return (
                         <TableRow key={stock.id}>
+                          <TableCell>{stock.kp_no || stock.id}</TableCell>
                           <TableCell>{contract?.name || contract?.id}</TableCell>
                           <TableCell>{quality?.name || 'N/A'}</TableCell>
-                          <TableCell>{stock.quantity_meters}m</TableCell>
+                          <TableCell>{stock.total_meters || stock.quantity_meters || 0}m</TableCell>
+                          <TableCell>{stock.received_meters || 0}m</TableCell>
+                          <TableCell>{stock.fresh_fabric || 0}m</TableCell>
                           <TableCell>{location?.name}</TableCell>
-                          <TableCell>{new Date(stock.date).toLocaleDateString()}</TableCell>
+                          <TableCell>{new Date(stock.date || stock.created_at).toLocaleDateString()}</TableCell>
                         </TableRow>
                       )
                     })}
@@ -206,8 +226,8 @@ const FabricManagement = () => {
                       <SelectTrigger><SelectValue placeholder="Select KP#" /></SelectTrigger>
                       <SelectContent>
                         {data.fabricStock?.map(f => (
-                          <SelectItem key={f.id} value={f.kp_no}>
-                            KP#{f.kp_no} - {f.total_meters}m
+                          <SelectItem key={f.id} value={f.id.toString()}>
+                            KP#{f.kp_no || f.id} - {f.total_meters || f.quantity_meters}m
                           </SelectItem>
                         ))}
                       </SelectContent>
