@@ -39,8 +39,9 @@ const YarnManagement = () => {
     "yarnStock",
     "yarnQualities",
     "suppliers",
-    "stockLocations",
+    "stockLocations", 
     "contracts",
+    "sizingAccounts",
   ]);
   const { receiveYarn, purchaseYarn, issueYarn, receiveSizing, issueSizing } = useData();
   const { toast } = useToast();
@@ -80,7 +81,7 @@ const YarnManagement = () => {
     issued_to: "",
     remarks: "",
 
-    // Sizing specific fields from provided code
+    // Sizing specific fields
     quality_id: "",
     loom_id: "",
     wires: "",
@@ -220,6 +221,7 @@ const YarnManagement = () => {
 
     // Calculate sizing total weight using the provided formula
     const sizingTotalWeight = calculateTotalWeight();
+    const sizingAmount = parseFloat(formData.rate) * sizingTotalWeight || 0;
 
     setFormData((prev) => ({
       ...prev,
@@ -229,7 +231,8 @@ const YarnManagement = () => {
       total_weight: (dialogType.includes("sizing")
         ? sizingTotalWeight
         : totalWeight
-      ).toFixed(3),
+      ).toFixed(4),
+      amount: sizingAmount.toFixed(2),
       weight_warp: calculateWeightWarp().toFixed(4),
       weight_weft: calculateWeightWeft().toFixed(4),
     }));
@@ -260,17 +263,119 @@ const YarnManagement = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Prepare payload with proper data types
-      const payload = {
-        ...formData,
-        // Convert string IDs to numbers where needed
-        contract_id: formData.contract_id ? parseInt(formData.contract_id) : null,
-        supplier_id: formData.supplier_id ? parseInt(formData.supplier_id) : null,
-        location_id: formData.location_id ? parseInt(formData.location_id) : null,
-        warp_quality_id: formData.warp_quality_id ? parseInt(formData.warp_quality_id) : null,
-        weft_quality_id: formData.weft_quality_id ? parseInt(formData.weft_quality_id) : null,
-        yarn_count_warp: formData.yarn_count_warp ? parseInt(formData.yarn_count_warp) : null,
-      };
+      let payload = {};
+
+      // Prepare payload based on dialog type
+      if (dialogType === "receive") {
+        payload = {
+          receive_from: formData.receive_from,
+          contract_id: formData.contract_id ? formData.contract_id : null,
+          location_id: formData.location_id ? formData.location_id : null,
+          warp_quality_id: formData.warp_quality_id ? formData.warp_quality_id : null,
+          weft_quality_id: formData.weft_quality_id ? formData.weft_quality_id : null,
+          warp_bags_quantity: parseFloat(formData.warp_bags_quantity) || 0,
+          weft_bags_quantity: parseFloat(formData.weft_bags_quantity) || 0,
+          warp_rate: parseFloat(formData.warp_rate) || 0,
+          weft_rate: parseFloat(formData.weft_rate) || 0,
+          warp_amount: parseFloat(formData.warp_amount) || 0,
+          weft_amount: parseFloat(formData.weft_amount) || 0,
+          total_weight: parseFloat(formData.total_weight) || 0,
+          total_amount: parseFloat(formData.total_amount) || 0,
+          received_date: formData.received_date,
+          remarks: formData.remarks || "",
+        };
+      } else if (dialogType === "purchase") {
+        payload = {
+          supplier_id: formData.supplier_id ? formData.supplier_id : null,
+          location_id: formData.location_id ? formData.location_id : null,
+          warp_quality_id: formData.warp_quality_id ? formData.warp_quality_id : null,
+          weft_quality_id: formData.weft_quality_id ? formData.weft_quality_id : null,
+          warp_bags_quantity: parseFloat(formData.warp_bags_quantity) || 0,
+          weft_bags_quantity: parseFloat(formData.weft_bags_quantity) || 0,
+          warp_rate: parseFloat(formData.warp_rate) || 0,
+          weft_rate: parseFloat(formData.weft_rate) || 0,
+          warp_amount: parseFloat(formData.warp_amount) || 0,
+          weft_amount: parseFloat(formData.weft_amount) || 0,
+          total_weight: parseFloat(formData.total_weight) || 0,
+          total_amount: parseFloat(formData.total_amount) || 0,
+          received_date: formData.received_date,
+          remarks: formData.remarks || "",
+        };
+      } else if (dialogType === "issue") {
+        payload = {
+          issue_to: formData.issue_to,
+          contract_id: formData.contract_id ? formData.contract_id : null,
+          location_id: formData.location_id ? formData.location_id : null,
+          warp_quality_id: formData.warp_quality_id ? formData.warp_quality_id : null,
+          weft_quality_id: formData.weft_quality_id ? formData.weft_quality_id : null,
+          warp_bags_quantity: parseFloat(formData.warp_bags_quantity) || 0,
+          weft_bags_quantity: parseFloat(formData.weft_bags_quantity) || 0,
+          warp_rate: parseFloat(formData.warp_rate) || 0,
+          weft_rate: parseFloat(formData.weft_rate) || 0,
+          warp_amount: parseFloat(formData.warp_amount) || 0,
+          weft_amount: parseFloat(formData.weft_amount) || 0,
+          total_weight: parseFloat(formData.total_weight) || 0,
+          issued_date: formData.issued_date,
+          purpose: formData.purpose || "",
+          issued_to: formData.issued_to || "",
+          total_amount: parseFloat(formData.total_amount) || 0,
+          remarks: formData.remarks || "",
+        };
+      } else if (dialogType === "sizing-receive") {
+        payload = {
+          receive_from: "sizing",
+          contract_id: formData.contract_id ? formData.contract_id : null,
+          sizing_account_id: formData.sizing_account_id ? formData.sizing_account_id : null,
+          location_id: formData.location_id ? formData.location_id : null,
+          yarn_count_warp: formData.yarn_count_warp ? formData.yarn_count_warp : null,
+          wires: parseInt(formData.wires) || 0,
+          qty_bag: parseFloat(formData.qty_bag) || 0,
+          per_bag: parseFloat(formData.per_bag) || 0,
+          kones: parseInt(formData.kones) || 0,
+          weight: parseFloat(formData.weight) || 0,
+          quality_set: parseInt(formData.quality_set) || 0,
+          length_set: parseFloat(formData.length_set) || 0,
+          length_yarn: parseFloat(formData.length_yarn) || 0,
+          qty_gulle: parseInt(formData.qty_gulle) || 0,
+          weight_gulle: parseFloat(formData.weight_gulle) || 0,
+          qty_paper: parseInt(formData.qty_paper) || 0,
+          weight_paper: parseFloat(formData.weight_paper) || 0,
+          empty_bag: parseInt(formData.empty_bag) || 0,
+          bag_weight: parseFloat(formData.bag_weight) || 0,
+          gole_waste: parseFloat(formData.gole_waste) || 0,
+          total_weight: parseFloat(formData.total_weight) || 0,
+          rate: parseFloat(formData.rate) || 0,
+          amount: parseFloat(formData.amount) || 0,
+          remarks: formData.remarks || "",
+        };
+      } else if (dialogType === "sizing-issue") {
+        payload = {
+          issue_to: "sizing",
+          contract_id: formData.contract_id ? formData.contract_id : null,
+          sizing_account_id: formData.sizing_account_id ? formData.sizing_account_id : null,
+          location_id: formData.location_id ? formData.location_id : null,
+          yarn_count_warp: formData.yarn_count_warp ? formData.yarn_count_warp : null,
+          wires: parseInt(formData.wires) || 0,
+          qty_bag: parseFloat(formData.qty_bag) || 0,
+          per_bag: parseFloat(formData.per_bag) || 0,
+          kones: parseInt(formData.kones) || 0,
+          weight: parseFloat(formData.weight) || 0,
+          quality_set: parseInt(formData.quality_set) || 0,
+          length_set: parseFloat(formData.length_set) || 0,
+          length_yarn: parseFloat(formData.length_yarn) || 0,
+          qty_gulle: parseInt(formData.qty_gulle) || 0,
+          weight_gulle: parseFloat(formData.weight_gulle) || 0,
+          qty_paper: parseInt(formData.qty_paper) || 0,
+          weight_paper: parseFloat(formData.weight_paper) || 0,
+          empty_bag: parseInt(formData.empty_bag) || 0,
+          bag_weight: parseFloat(formData.bag_weight) || 0,
+          gole_waste: parseFloat(formData.gole_waste) || 0,
+          total_weight: parseFloat(formData.total_weight) || 0,
+          rate: parseFloat(formData.rate) || 0,
+          amount: parseFloat(formData.amount) || 0,
+          remarks: formData.remarks || "",
+        };
+      }
 
       if (dialogType === "receive") {
         await receiveYarn(payload);
@@ -291,13 +396,13 @@ const YarnManagement = () => {
           description: "Yarn issued successfully",
         });
       } else if (dialogType === "sizing-receive") {
-        await receiveSizing({ ...payload, receive_from: "sizing" });
+        await receiveSizing(payload);
         toast({
           title: "Success",
           description: "Yarn received from sizing successfully",
         });
       } else if (dialogType === "sizing-issue") {
-        await issueSizing({ ...payload, issue_to: "sizing" });
+        await issueSizing(payload);
         toast({
           title: "Success",
           description: "Yarn issued to sizing successfully",
@@ -404,22 +509,23 @@ const YarnManagement = () => {
         ?.filter((contract) => !contract.is_internal)
         .map((contract) => ({
           ...contract,
-          display_name: `${contract.contract_number} - ${contract.client_name || "Unknown Client"}`,
+          display_name: `${contract.id || 'N/A'} - ${contract.client?.name || contract.client_name || "Unknown Client"}`,
         })) || []
     );
   };
 
   const totalStock = Array.isArray(data.yarnStock)
     ? data.yarnStock.reduce(
-        (sum, yarn) => sum + parseFloat(yarn.quantity_kg || 0),
+        (sum, yarn) => sum + parseFloat(yarn.warp_bags_quantity || 0) + parseFloat(yarn.weft_bags_quantity || 0),
         0,
       )
     : 0;
+
   const totalValue = Array.isArray(data.yarnStock)
     ? data.yarnStock.reduce(
         (sum, yarn) =>
           sum +
-          parseFloat(yarn.quantity_kg || 0) * parseFloat(yarn.rate_per_kg || 0),
+          parseFloat(yarn.total_amount || 0),
         0,
       )
     : 0;
@@ -478,7 +584,7 @@ const YarnManagement = () => {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalStock.toFixed(2)} kg</div>
+            <div className="text-2xl font-bold">{totalStock.toFixed(2)} bags</div>
             <p className="text-xs text-muted-foreground">All yarn qualities</p>
           </CardContent>
         </Card>
@@ -489,7 +595,7 @@ const YarnManagement = () => {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalValue.toFixed(2)}</div>
+            <div className="text-2xl font-bold">{totalValue.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">
               Current inventory value
             </p>
@@ -513,18 +619,6 @@ const YarnManagement = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Low Stock Alert
-            </CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{lowStockItems.length}</div>
-            <p className="text-xs text-muted-foreground">Items below 100kg</p>
-          </CardContent>
-        </Card>
       </div>
 
       <Card>
@@ -535,55 +629,48 @@ const YarnManagement = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Quality</TableHead>
-                <TableHead>Supplier</TableHead>
+                <TableHead>Received From</TableHead>
                 <TableHead>Location</TableHead>
-                <TableHead>Quantity (kg)</TableHead>
-                <TableHead>Rate (per kg)</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Warp Quality</TableHead>
+                <TableHead>Warp Quantity</TableHead>
+                <TableHead>Warp Amount</TableHead>
+                <TableHead>Weft Quality</TableHead>
+                <TableHead>Weft Quantity</TableHead>
+                <TableHead>Weft Amount</TableHead>
+                <TableHead>Total Amount</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {Array.isArray(data.yarnStock) &&
                 data.yarnStock.map((yarn) => {
-                  const quality = Array.isArray(data.yarnQualities)
-                    ? data.yarnQualities.find((q) => q.id === yarn.quality_id)
+                  const warpQuality = Array.isArray(data.yarnQualities)
+                    ? data.yarnQualities.find((q) => q.id === yarn.warp_quality_id)
                     : null;
-                  const supplier = Array.isArray(data.suppliers)
-                    ? data.suppliers.find((s) => s.id === yarn.supplier_id)
+                  const weftQuality = Array.isArray(data.yarnQualities)
+                    ? data.yarnQualities.find((q) => q.id === yarn.weft_quality_id)
                     : null;
                   const location = Array.isArray(data.stockLocations)
                     ? data.stockLocations.find((l) => l.id === yarn.location_id)
                     : null;
-                  const quantity = parseFloat(yarn.quantity_kg || 0);
-                  const rate = parseFloat(yarn.rate_per_kg || 0);
+                  const supplier = Array.isArray(data.suppliers)
+                    ? data.suppliers.find((s) => s.id === yarn.supplier_id)
+                    : null;
 
                   return (
                     <TableRow key={yarn.id}>
-                      <TableCell className="font-medium">
-                        {quality?.count || "Unknown"}
-                      </TableCell>
-                      <TableCell>{supplier?.name || "Unknown"}</TableCell>
+                      <TableCell>{yarn?.contract?.id || supplier.name}</TableCell>
                       <TableCell>{location?.name || "Unknown"}</TableCell>
-                      <TableCell>{quantity.toFixed(2)}</TableCell>
-                      <TableCell>${rate.toFixed(2)}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            quantity < 100
-                              ? "destructive"
-                              : quantity < 500
-                                ? "secondary"
-                                : "default"
-                          }
-                        >
-                          {quantity < 100
-                            ? "Low Stock"
-                            : quantity < 500
-                              ? "Medium"
-                              : "Good Stock"}
-                        </Badge>
+                      <TableCell className="font-medium">
+                        {warpQuality?.count || "Unknown"} {warpQuality?.ply || "Unknown"} {warpQuality?.ratio || "Unknown"}
                       </TableCell>
+                      <TableCell>{yarn?.warp_bags_quantity || "Unknown"}</TableCell>
+                      <TableCell>{yarn?.warp_amount || "Unknown"}</TableCell>
+                      <TableCell className="font-medium">
+                        {weftQuality?.count || "Unknown"} {weftQuality?.ply || "Unknown"} {weftQuality?.ratio || "Unknown"}
+                      </TableCell>
+                      <TableCell>{yarn?.weft_bags_quantity || "Unknown"}</TableCell>
+                      <TableCell>{yarn?.weft_amount || "Unknown"}</TableCell>
+                      <TableCell>{parseFloat(yarn?.warp_amount || 0) + parseFloat(yarn?.weft_amount || 0)}</TableCell>
                     </TableRow>
                   );
                 })}
@@ -593,7 +680,7 @@ const YarnManagement = () => {
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[800px] max-h-[95vh] overflow-hidden flex flex-col" description="Yarn management form">
+        <DialogContent className="sm:max-w-[800px] max-h-[95vh] overflow-hidden flex flex-col">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>
               {dialogType === "receive" && "Receive Yarn"}
@@ -649,7 +736,7 @@ const YarnManagement = () => {
                               key={contract.id}
                               value={contract.id.toString()}
                             >
-                              {contract}
+                              {contract.display_name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -1048,17 +1135,30 @@ const YarnManagement = () => {
 
                     <div className="space-y-2">
                       <Label htmlFor="sizing_account_id">Sizing Account</Label>
-                      <Input
-                        id="sizing_account_id"
+                      <Select
                         value={formData.sizing_account_id}
-                        onChange={(e) =>
+                        onValueChange={(value) =>
                           setFormData({
                             ...formData,
-                            sizing_account_id: e.target.value,
+                            sizing_account_id: value,
                           })
                         }
-                        placeholder="Account name"
-                      />
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select sizing account" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.isArray(data.sizingAccounts) &&
+                            data.sizingAccounts.map((account) => (
+                              <SelectItem
+                                key={account.id}
+                                value={account.id.toString()}
+                              >
+                                {account.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
@@ -1383,9 +1483,10 @@ const YarnManagement = () => {
                           type="number"
                           step="0.01"
                           value={formData.rate}
-                          onChange={(e) =>
-                            setFormData({ ...formData, rate: e.target.value })
-                          }
+                          onChange={(e) => {
+                            setFormData({ ...formData, rate: e.target.value });
+                            formData.amount = (parseFloat(e.target.value) * formData.total_weight).toFixed(4);
+                          }}
                           placeholder="Rate"
                         />
                       </div>
@@ -1396,10 +1497,9 @@ const YarnManagement = () => {
                           type="number"
                           step="0.01"
                           value={formData.amount}
-                          onChange={(e) =>
-                            setFormData({ ...formData, amount: e.target.value })
-                          }
                           placeholder="Amount"
+                          readOnly
+                          className="bg-gray-50"
                         />
                       </div>
                     </div>
@@ -1449,7 +1549,7 @@ const YarnManagement = () => {
 
                 <div className="grid grid-cols-2 gap-4">
 
-                  {(dialogType === "receive" || dialogType === "purchase") && (
+                  {(dialogType === "receive" || dialogType === "purchase" || dialogType === "issue") && (
                     <div className="space-y-2">
                       <Label htmlFor="total_amount">Total Amount</Label>
                       <Input
