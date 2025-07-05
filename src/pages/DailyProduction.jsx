@@ -22,10 +22,6 @@ const DailyProduction = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     const loom = data.looms.find(l => l.id === formData.loom_id);
-    if (loom && loom.quality !== formData.fabric_quality_id) {
-        toast({ title: "Error", description: "The selected fabric quality does not match the loom's assigned quality.", variant: "destructive" });
-        return;
-    }
     addDailyProduction(formData);
     setFormData({ date: new Date().toISOString().split('T')[0], contract_id: '', loom_id: '', fabric_quality_id: '', produced_meters: '' });
   };

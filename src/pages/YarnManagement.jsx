@@ -518,42 +518,63 @@ const YarnManagement = () => {
 
   // Calculate total stock by adding received and subtracting issued
   const calculateTotalStock = () => {
-    const yarnReceived = Array.isArray(data.yarnReceived)
-      ? data.yarnReceived.reduce(
-          (sum, yarn) => sum + parseFloat(yarn.warp_bags_quantity || 0) + parseFloat(yarn.weft_bags_quantity || 0),
-          0,
-        )
-      : 0;
+    const yarnReceived = getYarnReceived().reduce(
+      (sum, yarn) => sum + parseFloat(yarn.warp_bags_quantity || 0) + parseFloat(yarn.weft_bags_quantity || 0),
+      0,
+    );
 
-    const yarnPurchased = Array.isArray(data.yarnPurchased)
-      ? data.yarnPurchased.reduce(
-          (sum, yarn) => sum + parseFloat(yarn.warp_bags_quantity || 0) + parseFloat(yarn.weft_bags_quantity || 0),
-          0,
-        )
-      : 0;
+    const yarnPurchased = getYarnPurchased().reduce(
+      (sum, yarn) => sum + parseFloat(yarn.warp_bags_quantity || 0) + parseFloat(yarn.weft_bags_quantity || 0),
+      0,
+    );
 
-    const sizingReceived = Array.isArray(data.sizingReceived)
-      ? data.sizingReceived.reduce(
-          (sum, yarn) => sum + parseFloat(yarn.total_weight || 0),
-          0,
-        )
-      : 0;
+    const sizingReceived = getSizingReceived().reduce(
+      (sum, yarn) => sum + parseFloat(yarn.total_weight || 0),
+      0,
+    );
 
-    const yarnIssued = Array.isArray(data.yarnIssued)
-      ? data.yarnIssued.reduce(
-          (sum, yarn) => sum + parseFloat(yarn.warp_bags_quantity || 0) + parseFloat(yarn.weft_bags_quantity || 0),
-          0,
-        )
-      : 0;
+    const yarnIssued = getYarnIssued().reduce(
+      (sum, yarn) => sum + parseFloat(yarn.warp_bags_quantity || 0) + parseFloat(yarn.weft_bags_quantity || 0),
+      0,
+    );
 
-    const sizingIssued = Array.isArray(data.sizingIssued)
-      ? data.sizingIssued.reduce(
-          (sum, yarn) => sum + parseFloat(yarn.total_weight || 0),
-          0,
-        )
-      : 0;
+    const sizingIssued = getSizingIssued().reduce(
+      (sum, yarn) => sum + parseFloat(yarn.total_weight || 0),
+      0,
+    );
 
     return (yarnReceived + yarnPurchased + sizingReceived) - (yarnIssued + sizingIssued);
+  };
+
+  // Filter data by transaction type
+  const getYarnReceived = () => {
+    return Array.isArray(data.yarnStock) 
+      ? data.yarnStock.filter(item => item.type === 'receive')
+      : [];
+  };
+
+  const getYarnPurchased = () => {
+    return Array.isArray(data.yarnStock) 
+      ? data.yarnStock.filter(item => item.type === 'purchase')
+      : [];
+  };
+
+  const getYarnIssued = () => {
+    return Array.isArray(data.yarnStock) 
+      ? data.yarnStock.filter(item => item.type === 'issue')
+      : [];
+  };
+
+  const getSizingReceived = () => {
+    return Array.isArray(data.sizingStock) 
+      ? data.sizingStock.filter(item => item.type === 'receive')
+      : [];
+  };
+
+  const getSizingIssued = () => {
+    return Array.isArray(data.sizingStock) 
+      ? data.sizingStock.filter(item => item.type === 'issue')
+      : [];
   };
 
   const totalStock = calculateTotalStock();
@@ -666,31 +687,34 @@ const YarnManagement = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Received From</TableHead>
+                    <TableHead>Contract</TableHead>
                     <TableHead>Location</TableHead>
                     <TableHead>Warp Quality</TableHead>
                     <TableHead>Warp Quantity</TableHead>
                     <TableHead>Weft Quality</TableHead>
                     <TableHead>Weft Quantity</TableHead>
+                    <TableHead>Total Amount</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Remarks</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {Array.isArray(data.yarnReceived) ? (
-                    data.yarnReceived.map((yarn) => {
+                  {getYarnReceived().length > 0 ? (
+                    getYarnReceived().map((yarn) => {
                       const warpQuality = Array.isArray(data.yarnQualities)
                         ? data.yarnQualities.find((q) => q.id === yarn.warp_quality_id)
                         : null;
                       const weftQuality = Array.isArray(data.yarnQualities)
                         ? data.yarnQualities.find((q) => q.id === yarn.weft_quality_id)
                         : null;
-                      const location = Array.isArray(data.stockLocations)
+                      const location = yarn.location || Array.isArray(data.stockLocations)
                         ? data.stockLocations.find((l) => l.id === yarn.location_id)
                         : null;
 
                       return (
                         <TableRow key={yarn.id}>
-                          <TableCell>{yarn?.contract?.id || yarn.receive_from || "Unknown"}</TableCell>
+                          <TableCell>{yarn.receive_from || "Unknown"}</TableCell>
+                          <TableCell>{yarn?.contract?.id || "N/A"}</TableCell>
                           <TableCell>{location?.name || "Unknown"}</TableCell>
                           <TableCell className="font-medium">
                             {warpQuality ? `${warpQuality.count} ${warpQuality.ply} ${warpQuality.ratio}` : "N/A"}
@@ -700,6 +724,7 @@ const YarnManagement = () => {
                             {weftQuality ? `${weftQuality.count} ${weftQuality.ply} ${weftQuality.ratio}` : "N/A"}
                           </TableCell>
                           <TableCell>{yarn?.weft_bags_quantity || "0"}</TableCell>
+                          <TableCell>{yarn?.total_amount || "0"}</TableCell>
                           <TableCell>{yarn?.received_date || "Unknown"}</TableCell>
                           <TableCell>{yarn?.remarks || "-"}</TableCell>
                         </TableRow>
@@ -707,7 +732,7 @@ const YarnManagement = () => {
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground">
+                      <TableCell colSpan={10} className="text-center text-muted-foreground">
                         No yarn received records found
                       </TableCell>
                     </TableRow>
@@ -733,23 +758,24 @@ const YarnManagement = () => {
                     <TableHead>Warp Quantity</TableHead>
                     <TableHead>Weft Quality</TableHead>
                     <TableHead>Weft Quantity</TableHead>
+                    <TableHead>Total Amount</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Remarks</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {Array.isArray(data.yarnPurchased) ? (
-                    data.yarnPurchased.map((yarn) => {
+                  {getYarnPurchased().length > 0 ? (
+                    getYarnPurchased().map((yarn) => {
                       const warpQuality = Array.isArray(data.yarnQualities)
                         ? data.yarnQualities.find((q) => q.id === yarn.warp_quality_id)
                         : null;
                       const weftQuality = Array.isArray(data.yarnQualities)
                         ? data.yarnQualities.find((q) => q.id === yarn.weft_quality_id)
                         : null;
-                      const location = Array.isArray(data.stockLocations)
+                      const location = yarn.location || Array.isArray(data.stockLocations)
                         ? data.stockLocations.find((l) => l.id === yarn.location_id)
                         : null;
-                      const supplier = Array.isArray(data.suppliers)
+                      const supplier = yarn.supplier || Array.isArray(data.suppliers)
                         ? data.suppliers.find((s) => s.id === yarn.supplier_id)
                         : null;
 
@@ -762,9 +788,9 @@ const YarnManagement = () => {
                           </TableCell>
                           <TableCell>{yarn?.warp_bags_quantity || "0"}</TableCell>
                           <TableCell className="font-medium">
-                            {weftQuality ? `${weftQuality.count} ${weftQuality.ply} ${weftQuality.ratio}` : "N/A"}
-                          </TableCell>
+                            {weftQuality ? `${weftQuality.count} ${weftQuality.ply} ${weftQuality.ratio}` : "N/A"}                          </TableCell>
                           <TableCell>{yarn?.weft_bags_quantity || "0"}</TableCell>
+                          <TableCell>{yarn?.total_amount || "0"}</TableCell>
                           <TableCell>{yarn?.received_date || "Unknown"}</TableCell>
                           <TableCell>{yarn?.remarks || "-"}</TableCell>
                         </TableRow>
@@ -772,7 +798,7 @@ const YarnManagement = () => {
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground">
+                      <TableCell colSpan={9} className="text-center text-muted-foreground">
                         No yarn purchased records found
                       </TableCell>
                     </TableRow>
@@ -792,32 +818,34 @@ const YarnManagement = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Issued To</TableHead>
+                    <TableHead>Contract</TableHead>
                     <TableHead>Location</TableHead>
                     <TableHead>Warp Quality</TableHead>
                     <TableHead>Warp Quantity</TableHead>
                     <TableHead>Weft Quality</TableHead>
                     <TableHead>Weft Quantity</TableHead>
+                    <TableHead>Total Amount</TableHead>
                     <TableHead>Purpose</TableHead>
+                    <TableHead>Issued To</TableHead>
                     <TableHead>Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {Array.isArray(data.yarnIssued) ? (
-                    data.yarnIssued.map((yarn) => {
+                  {getYarnIssued().length > 0 ? (
+                    getYarnIssued().map((yarn) => {
                       const warpQuality = Array.isArray(data.yarnQualities)
                         ? data.yarnQualities.find((q) => q.id === yarn.warp_quality_id)
                         : null;
                       const weftQuality = Array.isArray(data.yarnQualities)
                         ? data.yarnQualities.find((q) => q.id === yarn.weft_quality_id)
                         : null;
-                      const location = Array.isArray(data.stockLocations)
+                      const location = yarn.location || Array.isArray(data.stockLocations)
                         ? data.stockLocations.find((l) => l.id === yarn.location_id)
                         : null;
 
                       return (
                         <TableRow key={yarn.id}>
-                          <TableCell>{yarn?.contract?.id || yarn.issue_to || "Unknown"}</TableCell>
+                          <TableCell>{yarn?.contract?.id || "N/A"}</TableCell>
                           <TableCell>{location?.name || "Unknown"}</TableCell>
                           <TableCell className="font-medium">
                             {warpQuality ? `${warpQuality.count} ${warpQuality.ply} ${warpQuality.ratio}` : "N/A"}
@@ -827,14 +855,16 @@ const YarnManagement = () => {
                             {weftQuality ? `${weftQuality.count} ${weftQuality.ply} ${weftQuality.ratio}` : "N/A"}
                           </TableCell>
                           <TableCell>{yarn?.weft_bags_quantity || "0"}</TableCell>
+                          <TableCell>{yarn?.total_amount || "0"}</TableCell>
                           <TableCell>{yarn?.purpose || "-"}</TableCell>
+                          <TableCell>{yarn?.issued_to || "-"}</TableCell>
                           <TableCell>{yarn?.issued_date || "Unknown"}</TableCell>
                         </TableRow>
                       );
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground">
+                      <TableCell colSpan={10} className="text-center text-muted-foreground">
                         No yarn issued records found
                       </TableCell>
                     </TableRow>
@@ -858,21 +888,23 @@ const YarnManagement = () => {
                     <TableHead>Sizing Account</TableHead>
                     <TableHead>Location</TableHead>
                     <TableHead>Yarn Count</TableHead>
+                    <TableHead>Wires</TableHead>
                     <TableHead>Total Weight</TableHead>
+                    <TableHead>Rate</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Remarks</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {Array.isArray(data.sizingIssued) ? (
-                    data.sizingIssued.map((sizing) => {
-                      const yarnQuality = Array.isArray(data.yarnQualities)
+                  {getSizingIssued().length > 0 ? (
+                    getSizingIssued().map((sizing) => {
+                      const yarnQuality = sizing.yarn_quality || Array.isArray(data.yarnQualities)
                         ? data.yarnQualities.find((q) => q.id === sizing.yarn_count_warp)
                         : null;
-                      const location = Array.isArray(data.stockLocations)
+                      const location = sizing.stock_location || Array.isArray(data.stockLocations)
                         ? data.stockLocations.find((l) => l.id === sizing.location_id)
                         : null;
-                      const sizingAccount = Array.isArray(data.sizingAccounts)
+                      const sizingAccount = sizing.sizing_account || Array.isArray(data.sizingAccounts)
                         ? data.sizingAccounts.find((s) => s.id === sizing.sizing_account_id)
                         : null;
 
@@ -884,7 +916,9 @@ const YarnManagement = () => {
                           <TableCell className="font-medium">
                             {yarnQuality ? `${yarnQuality.count} ${yarnQuality.ply} ${yarnQuality.ratio}` : "Unknown"}
                           </TableCell>
+                          <TableCell>{sizing?.wires || "0"}</TableCell>
                           <TableCell>{sizing?.total_weight || "0"}</TableCell>
+                          <TableCell>{sizing?.rate || "0"}</TableCell>
                           <TableCell>{sizing?.amount || "0"}</TableCell>
                           <TableCell>{sizing?.remarks || "-"}</TableCell>
                         </TableRow>
@@ -892,7 +926,7 @@ const YarnManagement = () => {
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground">
+                      <TableCell colSpan={9} className="text-center text-muted-foreground">
                         No sizing issued records found
                       </TableCell>
                     </TableRow>
@@ -916,21 +950,23 @@ const YarnManagement = () => {
                     <TableHead>Sizing Account</TableHead>
                     <TableHead>Location</TableHead>
                     <TableHead>Yarn Count</TableHead>
+                    <TableHead>Wires</TableHead>
                     <TableHead>Total Weight</TableHead>
+                    <TableHead>Rate</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Remarks</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {Array.isArray(data.sizingReceived) ? (
-                    data.sizingReceived.map((sizing) => {
-                      const yarnQuality = Array.isArray(data.yarnQualities)
+                  {getSizingReceived().length > 0 ? (
+                    getSizingReceived().map((sizing) => {
+                      const yarnQuality = sizing.yarn_quality || Array.isArray(data.yarnQualities)
                         ? data.yarnQualities.find((q) => q.id === sizing.yarn_count_warp)
                         : null;
-                      const location = Array.isArray(data.stockLocations)
+                      const location = sizing.stock_location || Array.isArray(data.stockLocations)
                         ? data.stockLocations.find((l) => l.id === sizing.location_id)
                         : null;
-                      const sizingAccount = Array.isArray(data.sizingAccounts)
+                      const sizingAccount = sizing.sizing_account || Array.isArray(data.sizingAccounts)
                         ? data.sizingAccounts.find((s) => s.id === sizing.sizing_account_id)
                         : null;
 
@@ -942,7 +978,9 @@ const YarnManagement = () => {
                           <TableCell className="font-medium">
                             {yarnQuality ? `${yarnQuality.count} ${yarnQuality.ply} ${yarnQuality.ratio}` : "Unknown"}
                           </TableCell>
+                          <TableCell>{sizing?.wires || "0"}</TableCell>
                           <TableCell>{sizing?.total_weight || "0"}</TableCell>
+                          <TableCell>{sizing?.rate || "0"}</TableCell>
                           <TableCell>{sizing?.amount || "0"}</TableCell>
                           <TableCell>{sizing?.remarks || "-"}</TableCell>
                         </TableRow>
@@ -950,7 +988,7 @@ const YarnManagement = () => {
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground">
+                      <TableCell colSpan={9} className="text-center text-muted-foreground">
                         No sizing received records found
                       </TableCell>
                     </TableRow>
