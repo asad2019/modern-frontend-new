@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import api from '@/lib/api';
 import { useToast } from "@/components/ui/use-toast";
@@ -45,19 +44,19 @@ export const DataProvider = ({ children }) => {
 
     const fetchData = useCallback(async (keys, force = false) => {
         if (!isAuthenticated) return;
-        
+
         const keysArray = Array.isArray(keys) ? keys : [keys];
         const keysToFetch = keysArray.filter(key => {
             if (!endpointMap[key]) return false;
             return force || !loadedKeysRef.current.has(key);
         });
-        
+
         if (keysToFetch.length === 0) return;
 
         // Check if any of these keys are already being loaded
         const alreadyLoading = keysToFetch.filter(key => loadingPromisesRef.current.has(key));
         const needToLoad = keysToFetch.filter(key => !loadingPromisesRef.current.has(key));
-        
+
         // Wait for already loading promises
         if (alreadyLoading.length > 0) {
             await Promise.all(alreadyLoading.map(key => loadingPromisesRef.current.get(key)));
@@ -99,7 +98,7 @@ export const DataProvider = ({ children }) => {
 
         try {
             const results = await Promise.all(loadPromises);
-            
+
             // Update data
             setData(prevData => {
                 const newData = { ...prevData };
@@ -109,12 +108,12 @@ export const DataProvider = ({ children }) => {
                     if (response && response.data && typeof response.data === 'object') {
                         responseData = response.data.data;
                     }
-                    
+
                     // Provide fallback values
                     if (responseData === undefined || responseData === null) {
                         responseData = key === 'settings' ? {} : [];
                     }
-                    
+
                     newData[key] = responseData;
                     if (success) {
                         loadedKeysRef.current.add(key);
@@ -140,12 +139,12 @@ export const DataProvider = ({ children }) => {
             const response = await api[method](endpoint, payload);
             if (response.data.success) {
                 toast({ title: "Success", description: successMessage });
-                
+
                 const affectedKey = Object.keys(endpointMap).find(key => endpoint.startsWith(`/${endpointMap[key]}`));
                 if (affectedKey) {
                     await fetchData([affectedKey], true);
                 }
-                
+
                 return response.data.data;
             } else {
                 throw new Error(response.data.message || response.data.error?.message || `Failed to perform action.`);
@@ -175,7 +174,72 @@ export const DataProvider = ({ children }) => {
     const addData = (key, item) => apiAction('post', `/${endpointMap[key]}`, item, 'Item added successfully.');
     const updateData = (key, id, updatedItem) => apiAction('put', `/${endpointMap[key]}/${id}`, updatedItem, 'Item updated successfully.');
     const deleteData = (key, id) => apiAction('delete', `/${endpointMap[key]}/${id}`, null, 'Item deleted successfully.');
-    
+
+  const receiveYarn = async (data) => {
+    try {
+      const response = await api.post('/yarn/receive', data);
+      console.log('Yarn received successfully:', response.data);
+      // Refresh yarn stock data
+      await fetchData(['yarnStock']);
+      return response.data;
+    } catch (error) {
+      console.error('Error receiving yarn:', error);
+      throw error;
+    }
+  };
+
+  const purchaseYarn = async (data) => {
+    try {
+      const response = await api.post('/yarn/purchase', data);
+      console.log('Yarn purchased successfully:', response.data);
+      // Refresh yarn stock data
+      await fetchData(['yarnStock']);
+      return response.data;
+    } catch (error) {
+      console.error('Error purchasing yarn:', error);
+      throw error;
+    }
+  };
+
+  const issueYarn = async (data) => {
+    try {
+      const response = await api.post('/yarn/issue', data);
+      console.log('Yarn issued successfully:', response.data);
+      // Refresh yarn stock data
+      await fetchData(['yarnStock']);
+      return response.data;
+    } catch (error) {
+      console.error('Error issuing yarn:', error);
+      throw error;
+    }
+  };
+
+  const receiveSizing = async (data) => {
+    try {
+      const response = await api.post('/sizing/receive', data);
+      console.log('Sizing received successfully:', response.data);
+      // Refresh relevant data
+      await fetchData(['yarnStock']);
+      return response.data;
+    } catch (error) {
+      console.error('Error receiving sizing:', error);
+      throw error;
+    }
+  };
+
+  const issueSizing = async (data) => {
+    try {
+      const response = await api.post('/sizing/issue', data);
+      console.log('Sizing issued successfully:', response.data);
+      // Refresh relevant data
+      await fetchData(['yarnStock']);
+      return response.data;
+    } catch (error) {
+      console.error('Error issuing sizing:', error);
+      throw error;
+    }
+  };
+
     const value = { 
         data, 
         loadingStates,
@@ -186,9 +250,11 @@ export const DataProvider = ({ children }) => {
         deleteData,
         updateSettings: (newSettings) => apiAction('put', '/settings', newSettings, 'Settings updated successfully.'),
         markNotificationsAsRead: () => apiAction('post', '/notifications/mark-as-read', {}, 'Notifications marked as read.'),
-        receiveYarn: (payload) => apiAction('post', '/yarn-stock/receive', payload, 'Yarn received successfully.'),
-        purchaseYarn: (payload) => apiAction('post', '/yarn-stock/purchase', payload, 'Yarn purchased successfully.'),
-        issueYarn: (payload) => apiAction('post', '/yarn-stock/issue', payload, 'Yarn issued successfully.'),
+        receiveYarn,
+        purchaseYarn,
+        issueYarn,
+        receiveSizing,
+        issueSizing,
         receiveFabric: (payload) => apiAction('post', '/fabric-stock/receive', payload, 'Fabric received successfully.'),
         issueFabric: (payload) => apiAction('post', '/fabric-stock/issue', payload, 'Fabric issued successfully.'),
         addDailyProduction: (payload) => apiAction('post', '/daily-production', payload, 'Daily production logged.'),
