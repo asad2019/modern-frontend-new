@@ -22,6 +22,7 @@ const endpointMap = {
     activityLog: 'activity-logs',
     notifications: 'notifications',
     yarnStock: 'yarn-stock',
+    sizingStock: 'sizing-stock',
     fabricStock: 'fabric-stock',
     dailyProduction: 'daily-production',
     processingOrders: 'processing-orders',

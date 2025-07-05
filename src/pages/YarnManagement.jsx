@@ -28,6 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Package, TrendingUp, AlertTriangle } from "lucide-react";
 import { useData } from "@/contexts/DataContext";
 import { useToast } from "@/components/ui/use-toast";
@@ -37,6 +38,7 @@ const YarnManagement = () => {
   // ALL HOOKS MUST BE CALLED FIRST - BEFORE ANY CONDITIONAL LOGIC
   const { data, isLoading } = usePageData([
     "yarnStock",
+    "sizingStock",
     "yarnQualities",
     "suppliers",
     "stockLocations", 
@@ -514,24 +516,47 @@ const YarnManagement = () => {
     );
   };
 
-  const totalStock = Array.isArray(data.yarnStock)
-    ? data.yarnStock.reduce(
-        (sum, yarn) => sum + parseFloat(yarn.warp_bags_quantity || 0) + parseFloat(yarn.weft_bags_quantity || 0),
-        0,
-      )
-    : 0;
+  // Calculate total stock by adding received and subtracting issued
+  const calculateTotalStock = () => {
+    const yarnReceived = Array.isArray(data.yarnReceived)
+      ? data.yarnReceived.reduce(
+          (sum, yarn) => sum + parseFloat(yarn.warp_bags_quantity || 0) + parseFloat(yarn.weft_bags_quantity || 0),
+          0,
+        )
+      : 0;
 
-  const totalValue = Array.isArray(data.yarnStock)
-    ? data.yarnStock.reduce(
-        (sum, yarn) =>
-          sum +
-          parseFloat(yarn.total_amount || 0),
-        0,
-      )
-    : 0;
-  const lowStockItems = Array.isArray(data.yarnStock)
-    ? data.yarnStock.filter((yarn) => parseFloat(yarn.quantity_kg || 0) < 100)
-    : [];
+    const yarnPurchased = Array.isArray(data.yarnPurchased)
+      ? data.yarnPurchased.reduce(
+          (sum, yarn) => sum + parseFloat(yarn.warp_bags_quantity || 0) + parseFloat(yarn.weft_bags_quantity || 0),
+          0,
+        )
+      : 0;
+
+    const sizingReceived = Array.isArray(data.sizingReceived)
+      ? data.sizingReceived.reduce(
+          (sum, yarn) => sum + parseFloat(yarn.total_weight || 0),
+          0,
+        )
+      : 0;
+
+    const yarnIssued = Array.isArray(data.yarnIssued)
+      ? data.yarnIssued.reduce(
+          (sum, yarn) => sum + parseFloat(yarn.warp_bags_quantity || 0) + parseFloat(yarn.weft_bags_quantity || 0),
+          0,
+        )
+      : 0;
+
+    const sizingIssued = Array.isArray(data.sizingIssued)
+      ? data.sizingIssued.reduce(
+          (sum, yarn) => sum + parseFloat(yarn.total_weight || 0),
+          0,
+        )
+      : 0;
+
+    return (yarnReceived + yarnPurchased + sizingReceived) - (yarnIssued + sizingIssued);
+  };
+
+  const totalStock = calculateTotalStock();
 
   return (
     <motion.div
@@ -577,7 +602,7 @@ const YarnManagement = () => {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Stock</CardTitle>
@@ -585,20 +610,7 @@ const YarnManagement = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalStock.toFixed(2)} bags</div>
-            <p className="text-xs text-muted-foreground">All yarn qualities</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Value</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalValue.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">
-              Current inventory value
-            </p>
+            <p className="text-xs text-muted-foreground">Current available stock</p>
           </CardContent>
         </Card>
 
@@ -619,65 +631,336 @@ const YarnManagement = () => {
           </CardContent>
         </Card>
 
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Sizing Accounts</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {Array.isArray(data.sizingAccounts)
+                ? data.sizingAccounts.length
+                : 0}
+            </div>
+            <p className="text-xs text-muted-foreground">Active sizing accounts</p>
+          </CardContent>
+        </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Current Yarn Stock</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Received From</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Warp Quality</TableHead>
-                <TableHead>Warp Quantity</TableHead>
-                <TableHead>Warp Amount</TableHead>
-                <TableHead>Weft Quality</TableHead>
-                <TableHead>Weft Quantity</TableHead>
-                <TableHead>Weft Amount</TableHead>
-                <TableHead>Total Amount</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {Array.isArray(data.yarnStock) &&
-                data.yarnStock.map((yarn) => {
-                  const warpQuality = Array.isArray(data.yarnQualities)
-                    ? data.yarnQualities.find((q) => q.id === yarn.warp_quality_id)
-                    : null;
-                  const weftQuality = Array.isArray(data.yarnQualities)
-                    ? data.yarnQualities.find((q) => q.id === yarn.weft_quality_id)
-                    : null;
-                  const location = Array.isArray(data.stockLocations)
-                    ? data.stockLocations.find((l) => l.id === yarn.location_id)
-                    : null;
-                  const supplier = Array.isArray(data.suppliers)
-                    ? data.suppliers.find((s) => s.id === yarn.supplier_id)
-                    : null;
+      <Tabs defaultValue="yarn-received" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="yarn-received">Yarn Received</TabsTrigger>
+          <TabsTrigger value="yarn-purchased">Yarn Purchased</TabsTrigger>
+          <TabsTrigger value="yarn-issued">Yarn Issued</TabsTrigger>
+          <TabsTrigger value="sizing-issued">Sizing Issued</TabsTrigger>
+          <TabsTrigger value="sizing-received">Sizing Received</TabsTrigger>
+        </TabsList>
 
-                  return (
-                    <TableRow key={yarn.id}>
-                      <TableCell>{yarn?.contract?.id || supplier.name}</TableCell>
-                      <TableCell>{location?.name || "Unknown"}</TableCell>
-                      <TableCell className="font-medium">
-                        {warpQuality?.count || "Unknown"} {warpQuality?.ply || "Unknown"} {warpQuality?.ratio || "Unknown"}
+        <TabsContent value="yarn-received">
+          <Card>
+            <CardHeader>
+              <CardTitle>Yarn Received</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Received From</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Warp Quality</TableHead>
+                    <TableHead>Warp Quantity</TableHead>
+                    <TableHead>Weft Quality</TableHead>
+                    <TableHead>Weft Quantity</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Remarks</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Array.isArray(data.yarnReceived) ? (
+                    data.yarnReceived.map((yarn) => {
+                      const warpQuality = Array.isArray(data.yarnQualities)
+                        ? data.yarnQualities.find((q) => q.id === yarn.warp_quality_id)
+                        : null;
+                      const weftQuality = Array.isArray(data.yarnQualities)
+                        ? data.yarnQualities.find((q) => q.id === yarn.weft_quality_id)
+                        : null;
+                      const location = Array.isArray(data.stockLocations)
+                        ? data.stockLocations.find((l) => l.id === yarn.location_id)
+                        : null;
+
+                      return (
+                        <TableRow key={yarn.id}>
+                          <TableCell>{yarn?.contract?.id || yarn.receive_from || "Unknown"}</TableCell>
+                          <TableCell>{location?.name || "Unknown"}</TableCell>
+                          <TableCell className="font-medium">
+                            {warpQuality ? `${warpQuality.count} ${warpQuality.ply} ${warpQuality.ratio}` : "N/A"}
+                          </TableCell>
+                          <TableCell>{yarn?.warp_bags_quantity || "0"}</TableCell>
+                          <TableCell className="font-medium">
+                            {weftQuality ? `${weftQuality.count} ${weftQuality.ply} ${weftQuality.ratio}` : "N/A"}
+                          </TableCell>
+                          <TableCell>{yarn?.weft_bags_quantity || "0"}</TableCell>
+                          <TableCell>{yarn?.received_date || "Unknown"}</TableCell>
+                          <TableCell>{yarn?.remarks || "-"}</TableCell>
+                        </TableRow>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center text-muted-foreground">
+                        No yarn received records found
                       </TableCell>
-                      <TableCell>{yarn?.warp_bags_quantity || "Unknown"}</TableCell>
-                      <TableCell>{yarn?.warp_amount || "Unknown"}</TableCell>
-                      <TableCell className="font-medium">
-                        {weftQuality?.count || "Unknown"} {weftQuality?.ply || "Unknown"} {weftQuality?.ratio || "Unknown"}
-                      </TableCell>
-                      <TableCell>{yarn?.weft_bags_quantity || "Unknown"}</TableCell>
-                      <TableCell>{yarn?.weft_amount || "Unknown"}</TableCell>
-                      <TableCell>{parseFloat(yarn?.warp_amount || 0) + parseFloat(yarn?.weft_amount || 0)}</TableCell>
                     </TableRow>
-                  );
-                })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="yarn-purchased">
+          <Card>
+            <CardHeader>
+              <CardTitle>Yarn Purchased</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Supplier</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Warp Quality</TableHead>
+                    <TableHead>Warp Quantity</TableHead>
+                    <TableHead>Weft Quality</TableHead>
+                    <TableHead>Weft Quantity</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Remarks</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Array.isArray(data.yarnPurchased) ? (
+                    data.yarnPurchased.map((yarn) => {
+                      const warpQuality = Array.isArray(data.yarnQualities)
+                        ? data.yarnQualities.find((q) => q.id === yarn.warp_quality_id)
+                        : null;
+                      const weftQuality = Array.isArray(data.yarnQualities)
+                        ? data.yarnQualities.find((q) => q.id === yarn.weft_quality_id)
+                        : null;
+                      const location = Array.isArray(data.stockLocations)
+                        ? data.stockLocations.find((l) => l.id === yarn.location_id)
+                        : null;
+                      const supplier = Array.isArray(data.suppliers)
+                        ? data.suppliers.find((s) => s.id === yarn.supplier_id)
+                        : null;
+
+                      return (
+                        <TableRow key={yarn.id}>
+                          <TableCell>{supplier?.name || "Unknown"}</TableCell>
+                          <TableCell>{location?.name || "Unknown"}</TableCell>
+                          <TableCell className="font-medium">
+                            {warpQuality ? `${warpQuality.count} ${warpQuality.ply} ${warpQuality.ratio}` : "N/A"}
+                          </TableCell>
+                          <TableCell>{yarn?.warp_bags_quantity || "0"}</TableCell>
+                          <TableCell className="font-medium">
+                            {weftQuality ? `${weftQuality.count} ${weftQuality.ply} ${weftQuality.ratio}` : "N/A"}
+                          </TableCell>
+                          <TableCell>{yarn?.weft_bags_quantity || "0"}</TableCell>
+                          <TableCell>{yarn?.received_date || "Unknown"}</TableCell>
+                          <TableCell>{yarn?.remarks || "-"}</TableCell>
+                        </TableRow>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center text-muted-foreground">
+                        No yarn purchased records found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="yarn-issued">
+          <Card>
+            <CardHeader>
+              <CardTitle>Yarn Issued</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Issued To</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Warp Quality</TableHead>
+                    <TableHead>Warp Quantity</TableHead>
+                    <TableHead>Weft Quality</TableHead>
+                    <TableHead>Weft Quantity</TableHead>
+                    <TableHead>Purpose</TableHead>
+                    <TableHead>Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Array.isArray(data.yarnIssued) ? (
+                    data.yarnIssued.map((yarn) => {
+                      const warpQuality = Array.isArray(data.yarnQualities)
+                        ? data.yarnQualities.find((q) => q.id === yarn.warp_quality_id)
+                        : null;
+                      const weftQuality = Array.isArray(data.yarnQualities)
+                        ? data.yarnQualities.find((q) => q.id === yarn.weft_quality_id)
+                        : null;
+                      const location = Array.isArray(data.stockLocations)
+                        ? data.stockLocations.find((l) => l.id === yarn.location_id)
+                        : null;
+
+                      return (
+                        <TableRow key={yarn.id}>
+                          <TableCell>{yarn?.contract?.id || yarn.issue_to || "Unknown"}</TableCell>
+                          <TableCell>{location?.name || "Unknown"}</TableCell>
+                          <TableCell className="font-medium">
+                            {warpQuality ? `${warpQuality.count} ${warpQuality.ply} ${warpQuality.ratio}` : "N/A"}
+                          </TableCell>
+                          <TableCell>{yarn?.warp_bags_quantity || "0"}</TableCell>
+                          <TableCell className="font-medium">
+                            {weftQuality ? `${weftQuality.count} ${weftQuality.ply} ${weftQuality.ratio}` : "N/A"}
+                          </TableCell>
+                          <TableCell>{yarn?.weft_bags_quantity || "0"}</TableCell>
+                          <TableCell>{yarn?.purpose || "-"}</TableCell>
+                          <TableCell>{yarn?.issued_date || "Unknown"}</TableCell>
+                        </TableRow>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center text-muted-foreground">
+                        No yarn issued records found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="sizing-issued">
+          <Card>
+            <CardHeader>
+              <CardTitle>Sizing Issued</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Contract</TableHead>
+                    <TableHead>Sizing Account</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Yarn Count</TableHead>
+                    <TableHead>Total Weight</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Remarks</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Array.isArray(data.sizingIssued) ? (
+                    data.sizingIssued.map((sizing) => {
+                      const yarnQuality = Array.isArray(data.yarnQualities)
+                        ? data.yarnQualities.find((q) => q.id === sizing.yarn_count_warp)
+                        : null;
+                      const location = Array.isArray(data.stockLocations)
+                        ? data.stockLocations.find((l) => l.id === sizing.location_id)
+                        : null;
+                      const sizingAccount = Array.isArray(data.sizingAccounts)
+                        ? data.sizingAccounts.find((s) => s.id === sizing.sizing_account_id)
+                        : null;
+
+                      return (
+                        <TableRow key={sizing.id}>
+                          <TableCell>{sizing?.contract?.id || "Unknown"}</TableCell>
+                          <TableCell>{sizingAccount?.name || "Unknown"}</TableCell>
+                          <TableCell>{location?.name || "Unknown"}</TableCell>
+                          <TableCell className="font-medium">
+                            {yarnQuality ? `${yarnQuality.count} ${yarnQuality.ply} ${yarnQuality.ratio}` : "Unknown"}
+                          </TableCell>
+                          <TableCell>{sizing?.total_weight || "0"}</TableCell>
+                          <TableCell>{sizing?.amount || "0"}</TableCell>
+                          <TableCell>{sizing?.remarks || "-"}</TableCell>
+                        </TableRow>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground">
+                        No sizing issued records found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="sizing-received">
+          <Card>
+            <CardHeader>
+              <CardTitle>Sizing Received</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Contract</TableHead>
+                    <TableHead>Sizing Account</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Yarn Count</TableHead>
+                    <TableHead>Total Weight</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Remarks</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Array.isArray(data.sizingReceived) ? (
+                    data.sizingReceived.map((sizing) => {
+                      const yarnQuality = Array.isArray(data.yarnQualities)
+                        ? data.yarnQualities.find((q) => q.id === sizing.yarn_count_warp)
+                        : null;
+                      const location = Array.isArray(data.stockLocations)
+                        ? data.stockLocations.find((l) => l.id === sizing.location_id)
+                        : null;
+                      const sizingAccount = Array.isArray(data.sizingAccounts)
+                        ? data.sizingAccounts.find((s) => s.id === sizing.sizing_account_id)
+                        : null;
+
+                      return (
+                        <TableRow key={sizing.id}>
+                          <TableCell>{sizing?.contract?.id || "Unknown"}</TableCell>
+                          <TableCell>{sizingAccount?.name || "Unknown"}</TableCell>
+                          <TableCell>{location?.name || "Unknown"}</TableCell>
+                          <TableCell className="font-medium">
+                            {yarnQuality ? `${yarnQuality.count} ${yarnQuality.ply} ${yarnQuality.ratio}` : "Unknown"}
+                          </TableCell>
+                          <TableCell>{sizing?.total_weight || "0"}</TableCell>
+                          <TableCell>{sizing?.amount || "0"}</TableCell>
+                          <TableCell>{sizing?.remarks || "-"}</TableCell>
+                        </TableRow>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground">
+                        No sizing received records found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-[800px] max-h-[95vh] overflow-hidden flex flex-col">
@@ -1503,42 +1786,6 @@ const YarnManagement = () => {
                         />
                       </div>
                     </div>
-
-                    {/* <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="income_tax_rate">Income Tax Rate</Label>
-                      <Input
-                        id="income_tax_rate"
-                        type="number"
-                        step="0.01"
-                        value={formData.income_tax_rate}
-                        onChange={(e) => setFormData({...formData, income_tax_rate: e.target.value})}
-                        placeholder="Income Tax Rate"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="income_tax_amount">Income Tax Amount</Label>
-                      <Input
-                        id="income_tax_amount"
-                        type="number"
-                        step="0.01"
-                        value={formData.income_tax_amount}
-                        onChange={(e) => setFormData({...formData, income_tax_amount: e.target.value})}
-                        placeholder="Income Tax Amount"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="net_amount">Net Amount</Label>
-                      <Input
-                        id="net_amount"
-                        type="number"
-                        step="0.01"
-                        value={formData.net_amount}
-                        onChange={(e) => setFormData({...formData, net_amount: e.target.value})}
-                        placeholder="Net Amount"
-                      />
-                    </div>
-                  </div> */}
                   </div>
                 </>
               )}
