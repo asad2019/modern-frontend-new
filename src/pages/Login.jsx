@@ -77,7 +77,7 @@ const Login = () => {
           <p className="text-muted-foreground mt-2">Sign in to your account</p>
         </div>
         
-        <div className="bg-muted/50 p-4 rounded-lg mb-6 text-sm">
+        {/* <div className="bg-muted/50 p-4 rounded-lg mb-6 text-sm">
           <h3 className="font-semibold mb-3">Demo Credentials (Click to use):</h3>
           <div className="space-y-2">
             <Button 
@@ -104,7 +104,7 @@ const Login = () => {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground mt-2">Note: Backend must be running for login to work.</p>
-        </div>
+        </div> */}
 
         <form onSubmit={handleLogin} className="space-y-6">
           <div className="space-y-2">

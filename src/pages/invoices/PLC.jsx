@@ -105,20 +105,22 @@ const PLC = () => {
     });
   };
 
+  // Unified RESTful API for invoices
   const submitData = async () => {
     setLoading(true);
     const selectedClientId = clients.find(
       (client) => client.name === formData.consignee_name
     )?.id;
-
     const payload = {
+      type: "PLC",
       client_id: selectedClientId,
+      date: formData.date,
       details: formData.details,
+      remarks: formData.remarks || "",
       ...formData,
     };
-
     try {
-      const response = await api.post("/invoice/store", payload);
+      const response = await api.post("/api/invoices", payload);
       toast({
         title: "Success",
         description: "Packing list saved successfully",
@@ -134,8 +136,46 @@ const PLC = () => {
     }
   };
 
+  // Print invoice
   const handlePrint = () => {
     window.print();
+  };
+
+  // Edit invoice
+  const editInvoice = async (id, updatedData) => {
+    setLoading(true);
+    try {
+      const response = await api.put(`/api/invoices/${id}`, updatedData);
+      toast({
+        title: "Success",
+        description: "Packing list updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update packing list",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // View invoice
+  const viewInvoice = async (id) => {
+    setLoading(true);
+    try {
+      const response = await api.get(`/api/invoices/${id}`);
+      setFormData(response.data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch packing list",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

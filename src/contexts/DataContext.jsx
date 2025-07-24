@@ -30,6 +30,10 @@ const endpointMap = {
     finishingUnits: 'finishing-units',
     maintenanceSchedules: 'maintenance-schedules',
     qcRecords: 'qc-records',
+    po: 'po',
+    products: 'products',
+    shipmentCodes: 'shipment-codes',
+    shipments: 'shipments',
 };
 
 export const DataProvider = ({ children }) => {
@@ -260,9 +264,10 @@ export const DataProvider = ({ children }) => {
         issueFabric: (payload) => apiAction('post', '/fabric-stock/issue', payload, 'Fabric issued successfully.'),
         addDailyProduction: (payload) => apiAction('post', '/daily-production', payload, 'Daily production logged.'),
         createProcessingOrder: (payload) => apiAction('post', '/processing-orders', payload, 'Processing order created.'),
+        updateProcessingOrder: (orderId, payload) => apiAction('put', `/processing-orders/${orderId}`, payload, 'PO updated.'),
         updateProcessingOrderStatus: (orderId, status) => apiAction('put', `/processing-orders/${orderId}/status`, { status }, 'Order status updated.'),
         closeContract: (contractId) => apiAction('put', `/contracts/${contractId}/close`, {}, 'Contract closed successfully.'),
-        performTransaction: (payload) => apiAction('post', '/stock/transfer', payload, 'Stock transferred successfully.'),
+        performTransaction: (payload) => apiAction('post', '/transactions', payload, 'Stock transferred successfully.'),
         createInvoice: (payload) => apiAction('post', '/invoices', payload, 'Invoice created successfully.'),
         resetData: () => apiAction('post', '/system/reset-data', {}, 'Data reset successfully initiated.').then(() => {
             loadedKeysRef.current.clear();

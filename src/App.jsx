@@ -35,6 +35,10 @@ import Settings from '@/pages/Settings';
 import Machines from '@/pages/Machines';
 import Maintenance from '@/pages/Maintenance';
 import QualityControl from '@/pages/QualityControl';
+import PO from '@/pages/PO';
+import Product from '@/pages/Product';
+import ShipmentCodes from '@/pages/ShipmentCodes';
+import Shipments from '@/pages/Shipments';
 
 function App() {
   return (
@@ -61,13 +65,17 @@ function App() {
         <Route path="cutting" element={<ProtectedRoute permissions={['processing-dashboard']}><Cutting /></ProtectedRoute>} />
         <Route path="sewing" element={<ProtectedRoute permissions={['processing-dashboard']}><Sewing /></ProtectedRoute>} />
         <Route path="packing" element={<ProtectedRoute permissions={['processing-dashboard']}><Packing /></ProtectedRoute>} />
+        <Route path="po" element={<ProtectedRoute permissions={['po']}><PO /></ProtectedRoute>} />
+        <Route path="product" element={<ProtectedRoute permissions={['product']}><Product /></ProtectedRoute>} />
+        <Route path="shipmentcodes" element={<ProtectedRoute permissions={['shipmentcodes']}><ShipmentCodes /></ProtectedRoute>} />
+        <Route path="shipments" element={<ProtectedRoute permissions={['shipments']}><Shipments /></ProtectedRoute>} />
 
         <Route path="contracts" element={<ProtectedRoute permissions={['contracts']}><Contracts /></ProtectedRoute>} />
         <Route path="clients" element={<ProtectedRoute permissions={['clients']}><Clients /></ProtectedRoute>} />
-        <Route path="brokers" element={<ProtectedRoute permissions={['clients']}><Brokers /></ProtectedRoute>} />
+        <Route path="brokers" element={<ProtectedRoute permissions={['brokers']}><Brokers /></ProtectedRoute>} />
         <Route path="suppliers" element={<ProtectedRoute permissions={['all']}><Suppliers /></ProtectedRoute>} />
         <Route path="finishing-units" element={<ProtectedRoute permissions={['all']}><FinishingUnits /></ProtectedRoute>} />
-        <Route path="sizing" element={<ProtectedRoute permissions={['clients']}><Sizing /></ProtectedRoute>} />
+        <Route path="sizing" element={<ProtectedRoute permissions={['sizing-accounts']}><Sizing /></ProtectedRoute>} />
         <Route path="stock" element={<ProtectedRoute permissions={['all']}><Stock /></ProtectedRoute>} />
         <Route path="looms" element={<ProtectedRoute permissions={['production-dashboard']}><Looms /></ProtectedRoute>} />
         <Route path="qualities" element={<ProtectedRoute permissions={['qualities']}><Qualities /></ProtectedRoute>} />

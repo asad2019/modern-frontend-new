@@ -54,7 +54,7 @@ const PLCus = () => {
   const fetchClients = async () => {
     try {
       const response = await api.get('/clients');
-      setClients(response.data || []);
+      setClients(response?.data?.data || []);
     } catch (error) {
       console.error('Error fetching clients:', error);
     }
@@ -285,49 +285,26 @@ const PLCus = () => {
     totalNetWt: 0,
   });
 
+  // Unified RESTful API for invoices
   const submitData = async () => {
     const selectedClientId = clients.find(
       (client) => client.name === formData.consignee_name
     )?.id;
-
     const payload = {
+      type: "PLCus",
       client_id: selectedClientId,
-      details: formData.details.map((detail) => ({
-        code: detail.code,
-        local_description: detail.local_description,
-        carton: detail.carton,
-        carton_two: detail.carton_two,
-        total_carton: detail.total_carton,
-        pcs: detail.pcs,
-        quantity: detail.quantity,
-        gr_wt: detail.gr_wt,
-        net_weight: detail.net_weight,
-      })),
-      invoice_number: formData.invoice_number,
       date: formData.date,
-      gd_number: formData.gd_number,
-      payment_terms: formData.payment_terms,
-      shipment: formData.shipment,
-      buyer_po: formData.buyer_po,
-      shippment_marks: formData.shippment_marks,
-      article_number: formData.article_number,
-      quantity: formData.quantity,
-      gr_wt: formData.gr_wt,
-      net_wt: formData.net_wt,
-      discharge_port: formData.discharge_port,
-      container_number: formData.container_number,
-      goods_description: formData.goods_description,
-      total_bales: formData.total_bales,
+      details: formData.details,
+      remarks: formData.remarks || "",
+      ...formData,
     };
-
     try {
-      await api.post('/invoices', payload);
+      await api.post('/api/invoices', payload);
       toast({
         title: "Success",
         description: "Packing list saved successfully",
       });
     } catch (error) {
-      console.error("Error saving packing list:", error);
       toast({
         title: "Error",
         description: "Failed to save packing list",
@@ -336,8 +313,40 @@ const PLCus = () => {
     }
   };
 
+  // Print invoice
   const handlePrint = () => {
     window.print();
+  };
+
+  // Edit invoice
+  const editInvoice = async (id, updatedData) => {
+    try {
+      await api.put(`/api/invoices/${id}`, updatedData);
+      toast({
+        title: "Success",
+        description: "Packing list updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update packing list",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // View invoice
+  const viewInvoice = async (id) => {
+    try {
+      const response = await api.get(`/api/invoices/${id}`);
+      setFormData(response.data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch packing list",
+        variant: "destructive",
+      });
+    }
   };
 
   const dateValue = formData?.date ? new Date(formData.date) : null;
@@ -432,7 +441,7 @@ const PLCus = () => {
             <div className="grid grid-cols-2 items-center">
               <div className="font-semibold">Date:</div>
               <DatePicker
-                className="!h-8 bg-black print:!h-6 pl-2 outline-none w-full border"
+                className="!h-8 print:!h-6 pl-2 outline-none w-full border"
                 selected={dateValue}
                 onChange={(date) =>
                   handleValueChange("date", date.toISOString().split("T")[0])

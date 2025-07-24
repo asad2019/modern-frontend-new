@@ -93,20 +93,22 @@ const SalesContract = () => {
     });
   };
 
+  // Unified RESTful API for invoices
   const submitData = async () => {
     setLoading(true);
     const selectedClientId = clients.find(
       (client) => client.name === formData.buyer_name
     )?.id;
-
     const payload = {
+      type: "SalesContract",
       client_id: selectedClientId,
+      date: formData.date,
       details: formData.details,
+      remarks: formData.remarks || "",
       ...formData,
     };
-
     try {
-      const response = await api.post("/contracts/store", payload);
+      const response = await api.post("/api/invoices", payload);
       toast({
         title: "Success",
         description: "Sales contract saved successfully",
@@ -122,8 +124,46 @@ const SalesContract = () => {
     }
   };
 
+  // Print contract
   const handlePrint = () => {
     window.print();
+  };
+
+  // Edit contract
+  const editInvoice = async (id, updatedData) => {
+    setLoading(true);
+    try {
+      const response = await api.put(`/api/invoices/${id}`, updatedData);
+      toast({
+        title: "Success",
+        description: "Sales contract updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update sales contract",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // View contract
+  const viewInvoice = async (id) => {
+    setLoading(true);
+    try {
+      const response = await api.get(`/api/invoices/${id}`);
+      setFormData(response.data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch sales contract",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { Badge } from "../../components/ui/badge";
 import { Trash2, Plus, Download, Save } from "lucide-react";
 import api from "../../lib/api";
+import { useData } from "../../contexts/DataContext";
 
 const CIC = () => {
   const initialFormData = {
@@ -43,6 +44,7 @@ const CIC = () => {
     return savedData ? JSON.parse(savedData) : initialFormData;
   });
   const [clients, setClients] = useState([]);
+  const { data } = useData();
   const [products, setProducts] = useState([]);
   const [totals, setTotals] = useState({ totalQuantity: 0, totalPrice: 0 });
   const [loading, setLoading] = useState(false);
@@ -52,7 +54,7 @@ const CIC = () => {
 
   const fetchClients = async () => {
     try {
-      const response = await api.get('/client/list');
+      const response = await api.get('/clients');
       setClients(response.data?.data || []);
     } catch (error) {
       console.error(error);
@@ -66,9 +68,12 @@ const CIC = () => {
 
   const fetchProducts = async (clientId) => {
     try {
-      const response = await api.get(`/product/show/by/client/${clientId}`);
-      setProducts(response.data?.data || []);
+      const response = await api.get('/products');
+      // Filter products by clientId as in products page
+      const allProducts = response.data?.data || [];
+      setProducts(allProducts.filter(product => product.client_id === clientId));
     } catch (error) {
+      setProducts([]);
       console.error(error);
     }
   };
@@ -184,17 +189,20 @@ const CIC = () => {
     });
   };
 
+  // Unified RESTful API for invoices
   const submitData = async () => {
     setLoading(true);
     try {
       const selectedClient = clients.find(client => client.name === formData.consignee_name);
       const payload = {
+        type: "CIC",
         client_id: selectedClient?.id,
+        date: formData.date,
         details: formData.details,
+        remarks: formData.remarks || "",
         ...formData,
       };
-
-      await api.post('/invoice/store', payload);
+      const response = await api.post('/api/invoices', payload);
       toast({
         title: "Success",
         description: "Invoice saved successfully",
@@ -211,8 +219,46 @@ const CIC = () => {
     }
   };
 
+  // Print invoice
   const handlePrint = () => {
     window.print();
+  };
+
+  // Edit invoice
+  const editInvoice = async (id, updatedData) => {
+    setLoading(true);
+    try {
+      const response = await api.put(`/api/invoices/${id}`, updatedData);
+      toast({
+        title: "Success",
+        description: "Invoice updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update invoice",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // View invoice
+  const viewInvoice = async (id) => {
+    setLoading(true);
+    try {
+      const response = await api.get(`/api/invoices/${id}`);
+      setFormData(response.data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch invoice",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getAvailableProducts = (index) => {

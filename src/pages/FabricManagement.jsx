@@ -43,68 +43,55 @@ const FabricManagement = () => {
 
   // Calculate fresh fabric when KP# is selected
   const calculateFreshFabric = (kpId, aGrade, bGrade, cGrade) => {
-    const kpRecord = data.fabricStock?.find(f => f.id === parseInt(kpId));
+    const kpRecord = data.fabricStock?.find(f => f.id === kpId);
     if (!kpRecord) return 0;
-    
-    const totalMeters = parseFloat(kpRecord.total_meters || kpRecord.quantity_meters) || 0;
+    const totalMeters = parseFloat(kpRecord.total_meters) || 0;
     const aGradeVal = parseFloat(aGrade) || 0;
     const bGradeVal = parseFloat(bGrade) || 0;
     const cGradeVal = parseFloat(cGrade) || 0;
-    
     return totalMeters - (aGradeVal + bGradeVal + cGradeVal);
-  };
+};
 
   // Calculate conversion charges from contract
-  const getConversionRateFromContract = (kpId) => {
-    const kpRecord = data.fabricStock?.find(f => f.id === parseInt(kpId));
-    if (!kpRecord) return 0;
-    
+  const getConversionChargesFromContract = (kpId) => {
+    const kpRecord = data.fabricStock?.find(f => f.id === kpId);
+    if (!kpRecord) return { perPick: 0, perMeter: 0 };
     const contract = data.contracts?.find(c => c.id === kpRecord.contract_id);
-    return parseFloat(contract?.conversion_rate || contract?.conv_charges_per_pick) || 0;
+    return {
+      perPick: parseFloat(contract?.conv_charges_per_pick) || 0,
+      perMeter: parseFloat(contract?.conv_charges_per_meter) || 0,
+    };
   };
 
-  const calculateTotalAmount = (conversionCharges, freshFabric) => {
-    return (parseFloat(conversionCharges) || 0) * (parseFloat(freshFabric) || 0);
+  const calculateTotalAmount = (conversionChargesPerMeter, freshFabric) => {
+    return (parseFloat(conversionChargesPerMeter) || 0) * (parseFloat(freshFabric) || 0);
   };
 
   const handleReceiveInputChange = (field, value) => {
     setReceiveData(prev => {
       const updated = { ...prev, [field]: value };
-      
       // Auto-calculate fresh fabric when grades change
       if (['kp_id', 'a_grade', 'b_grade', 'c_grade'].includes(field)) {
         const freshFabric = calculateFreshFabric(
-          updated.kp_id, 
-          updated.a_grade, 
-          updated.b_grade, 
+          updated.kp_id,
+          updated.a_grade,
+          updated.b_grade,
           updated.c_grade
         );
         updated.fresh_fabric = freshFabric;
-        
-        // Recalculate total amount with fresh fabric
-        if (updated.conversion_charges_per_pick && freshFabric) {
-          updated.total_amount = calculateTotalAmount(updated.conversion_charges_per_pick, freshFabric);
+        // Recalculate conversion charges from the contract
+        if (updated.kp_id) {
+          const { perPick, perMeter } = getConversionChargesFromContract(updated.kp_id);
+          updated.conversion_charges_per_pick = perPick;
+          // Calculate total amount using fresh fabric and conversion charges per meter
+          updated.total_amount = calculateTotalAmount(perMeter, freshFabric);
           updated.net_total = (parseFloat(updated.total_amount) || 0) + (parseFloat(updated.income_tax_amount) || 0);
         }
       }
-      
-      // Auto-calculate conversion charges when KP# is selected
-      if (field === 'kp_id' && value) {
-        const conversionRate = getConversionRateFromContract(value);
-        updated.conversion_charges_per_pick = conversionRate;
-        
-        // Calculate total amount with conversion rate and fresh fabric
-        if (conversionRate && updated.fresh_fabric) {
-          updated.total_amount = calculateTotalAmount(conversionRate, updated.fresh_fabric);
-          updated.net_total = (parseFloat(updated.total_amount) || 0) + (parseFloat(updated.income_tax_amount) || 0);
-        }
-      }
-      
       // Recalculate net total when income tax changes
       if (field === 'income_tax_amount') {
         updated.net_total = (parseFloat(updated.total_amount) || 0) + (parseFloat(value) || 0);
       }
-      
       return updated;
     });
   };
@@ -179,10 +166,11 @@ const FabricManagement = () => {
                     <TableRow>
                       <TableHead>KP#</TableHead>
                       <TableHead>Contract</TableHead>
-                      <TableHead>Quality</TableHead>
                       <TableHead>Issue (m)</TableHead>
-                      <TableHead>Receive (m)</TableHead>
                       <TableHead>Fresh Fabric (m)</TableHead>
+                      <TableHead>A Grade (m)</TableHead>
+                      <TableHead>B Grade (m)</TableHead>
+                      <TableHead>C Grade (m)</TableHead>
                       <TableHead>Location</TableHead>
                       <TableHead>Date</TableHead>
                     </TableRow>
@@ -191,15 +179,16 @@ const FabricManagement = () => {
                     {data.fabricStock?.map(stock => {
                       const contract = data.contracts?.find(c => c.id === stock.contract_id);
                       const quality = data.fabricQualities?.find(f => f.id === stock.fabric_quality_id);
-                      const location = data.stockLocations?.find(l => l.id === stock.location_id);
+                      const location = data.stockLocations?.find(l => l.id === stock.stock_location_id);
                       return (
                         <TableRow key={stock.id}>
                           <TableCell>{stock.kp_no || stock.id}</TableCell>
                           <TableCell>{contract?.name || contract?.id}</TableCell>
-                          <TableCell>{quality?.name || 'N/A'}</TableCell>
                           <TableCell>{stock.total_meters || stock.quantity_meters || 0}m</TableCell>
-                          <TableCell>{stock.received_meters || 0}m</TableCell>
                           <TableCell>{stock.fresh_fabric || 0}m</TableCell>
+                          <TableCell>{stock.a_grade || 0}m</TableCell>
+                          <TableCell>{stock.b_grade || 0}m</TableCell>
+                          <TableCell>{stock.c_grade || 0}m</TableCell>
                           <TableCell>{location?.name}</TableCell>
                           <TableCell>{new Date(stock.date || stock.created_at).toLocaleDateString()}</TableCell>
                         </TableRow>
