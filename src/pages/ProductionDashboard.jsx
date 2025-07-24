@@ -23,7 +23,6 @@ const ProductionDashboard = () => {
       <Tabs defaultValue="contracts" className="w-full">
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="contracts">Contracts</TabsTrigger>
-          <TabsTrigger value="clients">Clients</TabsTrigger>
           <TabsTrigger value="qualities">Qualities</TabsTrigger>
           <TabsTrigger value="yarn">Yarn Management</TabsTrigger>
           <TabsTrigger value="fabric">Fabric Management</TabsTrigger>
@@ -31,10 +30,7 @@ const ProductionDashboard = () => {
         </TabsList>
         <TabsContent value="contracts">
           <Contracts />
-        </TabsContent>
-        <TabsContent value="clients">
-          <Clients />
-        </TabsContent>
+          </TabsContent>
         <TabsContent value="qualities">
           <Qualities />
         </TabsContent>
